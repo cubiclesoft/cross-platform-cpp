@@ -185,7 +185,7 @@ namespace CubicleSoft
 			else
 			{
 				Nodes = (*MainPtr)[Num].GetSize();
-				Size = 1 << Num;
+				Size = (size_t)(1 << Num);
 				if (Size < sizeof(QueueNode<char>))  Size = sizeof(QueueNode<char>);
 				Size *= Nodes;
 			}

@@ -25,7 +25,7 @@
 #include "utf8/utf8_file_dir.h"
 
 // Test global instantiations for crash bugs.
-CubicleSoft::Security::CSPRNG GxSecurityCSPRNG;
+CubicleSoft::Security::CSPRNG GxSecurityCSPRNG(false);
 CubicleSoft::Sync::Event GxSyncEvent;
 CubicleSoft::Sync::Mutex GxSyncMutex;
 CubicleSoft::Sync::Semaphore GxSyncSemaphore;
@@ -141,7 +141,7 @@ int Test_Security_CSPRNG(FILE *Testfp)
 {
 	TEST_START(Test_Security_CSPRNG);
 
-	CubicleSoft::Security::CSPRNG TestCSPRNG;
+	CubicleSoft::Security::CSPRNG TestCSPRNG(false);
 	std::uint8_t Data[4096];
 	bool x;
 	size_t x2;
@@ -486,7 +486,7 @@ int Test_Templates_Cache(FILE *Testfp)
 
 	for (x2 = 0; x2 < 100; x2++)
 	{
-		TestCache.Insert(x2, x2, x2 + 1);
+		TestCache.Insert(x2, x2, (int)(x2 + 1));
 	}
 
 	x = TestCache.Exists(99, 99);
