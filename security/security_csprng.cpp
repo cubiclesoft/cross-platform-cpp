@@ -9,7 +9,7 @@ namespace CubicleSoft
 	{
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
 		// Windows.
-		CSPRNG::CSPRNG()
+		CSPRNG::CSPRNG(bool)
 		{
 			HMODULE TempModule = ::LoadLibraryA("ADVAPI32.DLL");
 			if (TempModule == NULL)  MxRtlGenRandom = NULL;
@@ -24,13 +24,18 @@ namespace CubicleSoft
 		{
 			if (MxRtlGenRandom == NULL)  return false;
 
-			return ((*MxRtlGenRandom)(Result, Size) == 1);
+			return ((*MxRtlGenRandom)(Result, (ULONG)Size) != FALSE);
 		}
 #else
 		// Linux.
-		CSPRNG::CSPRNG()
+		CSPRNG::CSPRNG(bool CryptoSafe)
 		{
-			MxURandom = open("/dev/urandom", O_RDONLY);
+			if (CryptoSafe)  MxURandom = open("/dev/random", O_RDONLY);
+			else
+			{
+				MxURandom = open("/dev/arandom", O_RDONLY);
+				if (MxURandom < 0)  MxURandom = open("/dev/urandom", O_RDONLY);
+			}
 		}
 
 		CSPRNG::~CSPRNG()

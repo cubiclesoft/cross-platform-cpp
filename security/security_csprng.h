@@ -22,7 +22,7 @@ namespace CubicleSoft
 		class CSPRNG
 		{
 		public:
-			CSPRNG();
+			CSPRNG(bool CryptoSafe);
 			~CSPRNG();
 
 			bool GetBytes(std::uint8_t *Result, size_t Size);
