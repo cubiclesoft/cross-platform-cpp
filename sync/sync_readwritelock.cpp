@@ -138,7 +138,7 @@ namespace CubicleSoft
 			// Get current time in milliseconds.
 			StartTime = (Wait == INFINITE ? 0 : Util::GetUnixMicrosecondTime() / 1000000);
 
-			// Acquire the write lock mutex.  Guarantees that readers can't starve the writer.
+			// Acquire the write lock mutex.
 			DWORD Result = ::WaitForSingleObject(MxWinWWaitMutex, Wait);
 			if (Result != WAIT_OBJECT_0)  return false;
 
@@ -362,7 +362,7 @@ namespace CubicleSoft
 			// Get current time in milliseconds.
 			StartTime = (Wait == INFINITE ? 0 : Util::GetUnixMicrosecondTime() / 1000000);
 
-			// Acquire the write lock mutex.  Guarantees that readers can't starve the writer.
+			// Acquire the write lock mutex.
 			if (!Util::WaitForSemaphore(MxSemWWaitMutex, Wait))  return false;
 
 			// Wait for readers to reach zero.
