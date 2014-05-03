@@ -184,7 +184,7 @@ namespace CubicleSoft
 				MxAllocated = false;
 
 				sprintf(Name2, "/Sync_Mutex_%s_0", Name);
-				MxSemMutex = sem_open(Name, O_CREAT, 0666, 1);
+				MxSemMutex = sem_open(Name2, O_CREAT, 0666, 1);
 
 				delete[] Name2;
 			}
