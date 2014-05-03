@@ -228,7 +228,7 @@ int Test_Sync_Event(FILE *Testfp)
 
 
 	// Named, manual event.
-	x = TestEvent.Create("test_suite", true);
+	x = TestEvent.Create("test_suite2", true);
 	TEST_COMPARE(x, 1);
 
 	x = TestEvent.Wait(0);
