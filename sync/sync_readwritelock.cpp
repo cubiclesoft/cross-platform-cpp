@@ -1,5 +1,5 @@
 // Cross-platform, optionally named (cross-process), reader/writer lock.
-// (C) 2013 CubicleSoft.  All Rights Reserved.
+// (C) 2014 CubicleSoft.  All Rights Reserved.
 
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -374,6 +374,9 @@ namespace CubicleSoft
 				return false;
 			}
 
+			// Release the semaphore to avoid a later deadlock.
+			sem_post(MxSemRWaitEvent);
+
 			return true;
 		}
 
@@ -385,12 +388,26 @@ namespace CubicleSoft
 			if (!Util::WaitForSemaphore(MxSemRSemMutex, INFINITE))  return false;
 
 			// Release the semaphore.
-			int Result = sem_post(MxSemRSemaphore);
+			Result = sem_post(MxSemRSemaphore);
+			if (Result != 0)
+			{
+				sem_post(MxSemRSemMutex);
+
+				return false;
+			}
 
 			// Update the event state.
 			int Val;
 			sem_getvalue(MxSemRSemaphore, &Val);
-			if (Val == SEM_VALUE_MAX)  sem_post(MxSemRWaitEvent);
+			if (Val == SEM_VALUE_MAX)
+			{
+				if (sem_post(MxSemRWaitEvent) != 0)
+				{
+					sem_post(MxSemRSemMutex);
+
+					return false;
+				}
+			}
 
 			// Release the semaphore mutex.
 			sem_post(MxSemRSemMutex);
