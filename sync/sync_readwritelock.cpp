@@ -388,7 +388,7 @@ namespace CubicleSoft
 			if (!Util::WaitForSemaphore(MxSemRSemMutex, INFINITE))  return false;
 
 			// Release the semaphore.
-			Result = sem_post(MxSemRSemaphore);
+			int Result = sem_post(MxSemRSemaphore);
 			if (Result != 0)
 			{
 				sem_post(MxSemRSemMutex);
