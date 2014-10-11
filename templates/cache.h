@@ -36,7 +36,7 @@ namespace CubicleSoft
 	#include "cache_util.h"
 	#undef CUBICLESOFT_CACHE_NOCOPYASSIGN
 
-	// Static functions that takes a string and converts to integer.
+	// Static functions that take a string and convert to integer.
 	class CacheUtil
 	{
 	public:

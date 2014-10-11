@@ -298,6 +298,7 @@ public:
 		{
 			LastNode = LastNode->PrevNode;
 			if (LastNode != NULL)  LastNode->NextNode = NULL;
+			else  FirstNode = NULL;
 		}
 		else
 		{

@@ -41,7 +41,7 @@ public:
 
 		NumNodes = TempCache.NumNodes;
 		Nodes = new CacheNode<XKey, XValue>[NumNodes];
-		for (x = 0; x < NumNodes; x++)  Nodes[x] = TempCache[x];
+		for (x = 0; x < NumNodes; x++)  Nodes[x] = TempCache.Nodes[x];
 	}
 
 	Cache<XKey, XValue> &operator=(const Cache<XKey, XValue> &TempCache)
@@ -58,7 +58,7 @@ public:
 				Nodes = new CacheNode<XKey, XValue>[NumNodes];
 			}
 
-			for (x = 0; x < NumNodes; x++)  Nodes[x] = TempCache[x];
+			for (x = 0; x < NumNodes; x++)  Nodes[x] = TempCache.Nodes[x];
 		}
 
 		return *this;
