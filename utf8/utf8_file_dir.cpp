@@ -995,6 +995,8 @@ namespace CubicleSoft
 
 		bool Dir::Open(const char *Dirname)
 		{
+			Close();
+
 			char Dirname2[8192];
 			size_t y;
 
