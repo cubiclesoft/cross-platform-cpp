@@ -22,6 +22,7 @@
 #include "templates/detachable_ordered_hash.h"
 #include "templates/detachable_queue.h"
 #include "templates/static_vector.h"
+#include "templates/static_2d_array.h"
 #include "utf8/utf8_util.h"
 #include "utf8/utf8_file_dir.h"
 
@@ -37,6 +38,7 @@ CubicleSoft::List<int> GxList;
 CubicleSoft::OrderedHash<int> GxOrderedHash(47);
 CubicleSoft::Queue<int> GxQueue;
 CubicleSoft::StaticVector<int> GxStaticVector(10);
+CubicleSoft::Static2DArray<int> GxStatic2DArray(20, 2);
 CubicleSoft::UTF8::File GxFile;
 CubicleSoft::UTF8::Dir GxDir;
 
@@ -668,6 +670,33 @@ int Test_Templates_StaticVector(FILE *Testfp)
 	TEST_RETURN();
 }
 
+int Test_Templates_Static2DArray(FILE *Testfp)
+{
+	TEST_START(Test_Templates_Static2DArray);
+
+	CubicleSoft::Static2DArray<int> TestArray(20, 2);
+	bool x;
+	int x2, y2;
+
+	for (y2 = 0; y2 < 2; y2++)
+	{
+		for (x2 = 0; x2 < 20; x2++)  TestArray[y2][x2] = (y2 * 20) + x2;
+	}
+
+	x = (TestArray.GetWidth() == 20);
+	TEST_COMPARE(x, 1);
+
+	x = (TestArray.GetHeight() == 2);
+	TEST_COMPARE(x, 1);
+
+	x = (TestArray[1][1] == 21);
+	TEST_COMPARE(x, 1);
+
+	TEST_SUMMARY();
+
+	TEST_RETURN();
+}
+
 int Test_Sync_TLS(FILE *Testfp)
 {
 	TEST_START(Test_Sync_TLS);
@@ -841,6 +870,7 @@ int main(int argc, char **argv)
 		Test_Templates_OrderedHash(stdout);
 		Test_Templates_Queue(stdout);
 		Test_Templates_StaticVector(stdout);
+		Test_Templates_Static2DArray(stdout);
 		Test_Sync_TLS(stdout);
 		Test_UTF8_File(stdout);
 		Test_UTF8_Dir(stdout);
