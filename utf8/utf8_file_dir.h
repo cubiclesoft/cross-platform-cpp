@@ -150,8 +150,10 @@ namespace CubicleSoft
 			File &operator=(const File &);
 
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+public:
 			static bool GetWindowsPlatformFilename(LPWSTR Result, size_t ResultSize, const char *Filename);
 			static bool GetWindowsFilenameInfo(BY_HANDLE_FILE_INFORMATION *Result, LPWSTR Filename);
+private:
 			static FILETIME ConvertUnixMicrosecondTimeToFILETIME(std::uint64_t TempTime);
 			static __time64_t ConvertFILETIMEToUnixTime(FILETIME TempTime);
 			typedef BOOL (APIENTRY *CreateSymbolicLinkWFunc)(LPWSTR, LPWSTR, DWORD);
