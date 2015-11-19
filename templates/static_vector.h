@@ -65,7 +65,7 @@ namespace CubicleSoft
 
 			size_t x;
 			for (x = 0; x < Size && ptr[x] == TempVector.ptr[x]; x++);
-			if (x < Size)  return 0;
+			if (x < Size)  return false;
 
 			return true;
 		}
