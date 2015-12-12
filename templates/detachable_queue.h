@@ -4,6 +4,8 @@
 #ifndef CUBICLESOFT_DETACHABLE_QUEUE
 #define CUBICLESOFT_DETACHABLE_QUEUE
 
+#include <cstddef>
+
 namespace CubicleSoft
 {
 	template <class T>

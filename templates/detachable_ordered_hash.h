@@ -5,6 +5,7 @@
 #define CUBICLESOFT_DETACHABLE_ORDEREDHASH
 
 #include <cstdint>
+#include <cstddef>
 
 namespace CubicleSoft
 {
@@ -92,15 +93,21 @@ namespace CubicleSoft
 		void SetStrKey(const char *NewStrKey, const size_t NewStrLen, const bool CopyStr)
 		{
 			HashKey = 0;
-			IntKey = (std::int64_t)NewStrLen;
 
-			if (!CopyStr)  StrKey = NewStrKey;
+			if (!CopyStr)  StrKey = (char *)NewStrKey;
 			else
 			{
-				if (StrKey != NULL)  delete[] StrKey;
-				StrKey = new char[NewStrLen];
-				memcpy(StrKey, NewStrKey, IntKey);
+				if (StrKey == NULL)  StrKey = new char[NewStrLen];
+				else if (IntKey < (std::int64_t)NewStrLen)
+				{
+					delete[] StrKey;
+					StrKey = new char[NewStrLen];
+				}
+
+				memcpy(StrKey, NewStrKey, NewStrLen);
 			}
+
+			IntKey = (std::int64_t)NewStrLen;
 		}
 
 	private:
@@ -125,8 +132,8 @@ namespace CubicleSoft
 	{
 	public:
 		static const size_t Primes[31];
-		static size_t GetDJBX33XHashKey(std::uint8_t *Str, size_t Size, size_t InitVal);
-		static std::uint64_t GetSipHashKey(std::uint8_t *Str, size_t Size, std::uint64_t Key1, std::uint64_t Key2, size_t cRounds, size_t dRounds);
+		static size_t GetDJBX33XHashKey(const std::uint8_t *Str, size_t Size, size_t InitVal);
+		static std::uint64_t GetSipHashKey(const std::uint8_t *Str, size_t Size, std::uint64_t Key1, std::uint64_t Key2, size_t cRounds, size_t dRounds);
 	};
 
 	// OrderedHash.  An ordered hash.

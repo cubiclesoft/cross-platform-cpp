@@ -13,7 +13,7 @@ namespace CubicleSoft
 		100663291, 201326611, 402653189, 805306357, 1610612741, 3221225473
 	};
 
-	size_t OrderedHashUtil::GetDJBX33XHashKey(std::uint8_t *Str, size_t Size, size_t InitVal)
+	size_t OrderedHashUtil::GetDJBX33XHashKey(const std::uint8_t *Str, size_t Size, size_t InitVal)
 	{
 		std::uint32_t Result = (std::uint32_t)InitVal;
 		std::uint32_t y;
@@ -51,7 +51,7 @@ namespace CubicleSoft
 			v2 += v1; v1 = ROTL(v1, 17); v1 ^= v2; v2 = ROTL(v2, 32); \
 		} while(0)
 
-	std::uint64_t OrderedHashUtil::GetSipHashKey(std::uint8_t *Str, size_t Size, std::uint64_t Key1, std::uint64_t Key2, size_t cRounds, size_t dRounds)
+	std::uint64_t OrderedHashUtil::GetSipHashKey(const std::uint8_t *Str, size_t Size, std::uint64_t Key1, std::uint64_t Key2, size_t cRounds, size_t dRounds)
 	{
 		// "somepseudorandomlygeneratedbytes"
 		std::uint64_t v0 = 0x736f6d6570736575ULL;

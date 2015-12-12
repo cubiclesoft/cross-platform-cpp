@@ -22,7 +22,7 @@ public:
 #else
 	OrderedHash
 #endif
-		(size_t EstimatedSize, std::uint64_t HashKey = 5381) : HashNodes(NULL), HashSize(0), NextPrimePos(0), FirstListNode(NULL), LastListNode(NULL), NumListNodes(0), UseSipHash(false), Key1(HashKey), Key2(0)
+		(size_t EstimatedSize = 23, std::uint64_t HashKey = 5381) : HashNodes(NULL), HashSize(0), NextPrimePos(0), FirstListNode(NULL), LastListNode(NULL), NumListNodes(0), UseSipHash(false), Key1(HashKey), Key2(0)
 	{
 		ResizeHash(EstimatedSize);
 	}
@@ -438,7 +438,7 @@ public:
 		NumListNodes = 0;
 	}
 
-	OrderedHashNode<T> *Find(const std::int64_t IntKey)
+	OrderedHashNode<T> *Find(const std::int64_t IntKey) const
 	{
 		std::uint64_t HashKey = GetHashKey((std::uint8_t *)&IntKey, sizeof(std::int64_t));
 		size_t x = (size_t)(HashKey % (std::uint64_t)HashSize);
@@ -449,7 +449,7 @@ public:
 		return Node;
 	}
 
-	OrderedHashNode<T> *Find(const char *StrKey, const size_t StrLen)
+	OrderedHashNode<T> *Find(const char *StrKey, const size_t StrLen) const
 	{
 		std::uint64_t HashKey = GetHashKey((std::uint8_t *)StrKey, StrLen);
 		size_t x = (size_t)(HashKey % (std::uint64_t)HashSize);
@@ -460,7 +460,7 @@ public:
 		return Node;
 	}
 
-	OrderedHashNode<T> *Find(OrderedHashNode<T> *FindNode)
+	OrderedHashNode<T> *Find(OrderedHashNode<T> *FindNode) const
 	{
 		std::uint64_t HashKey;
 
@@ -530,7 +530,7 @@ public:
 	inline size_t GetListSize() const  { return NumListNodes; }
 
 private:
-	inline std::uint64_t GetHashKey(std::uint8_t *Str, size_t Size)
+	inline std::uint64_t GetHashKey(const std::uint8_t *Str, size_t Size) const
 	{
 		return (UseSipHash ? OrderedHashUtil::GetSipHashKey(Str, Size, Key1, Key2, 2, 4) : (std::uint64_t)OrderedHashUtil::GetDJBX33XHashKey(Str, Size, (size_t)Key1));
 	}
