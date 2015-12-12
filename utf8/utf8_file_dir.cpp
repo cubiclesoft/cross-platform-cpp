@@ -1871,13 +1871,13 @@ namespace CubicleSoft
 
 			if (NPos != NULL)
 			{
-				Seek(File::SeekBackward, CurrSize - (size_t)(NPos - Result) + 1);
+				Seek(File::SeekBackward, CurrSize - (size_t)(NPos - Result) - 1);
 				if (RPos != NULL)  *RPos = '\0';
 				else  *NPos = '\0';
 			}
 			else if (RPos != NULL)
 			{
-				Seek(File::SeekBackward, CurrSize - (size_t)(RPos - Result) + 1);
+				Seek(File::SeekBackward, CurrSize - (size_t)(RPos - Result) - 1);
 				*RPos = '\0';
 			}
 			else
