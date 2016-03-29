@@ -45,7 +45,12 @@ public:
 	~OrderedHash()
 #endif
 	{
-		if (HashNodes != NULL)  Empty();
+		if (HashNodes != NULL)
+		{
+			Empty();
+
+			delete[] HashNodes;
+		}
 	}
 
 #ifdef CUBICLESOFT_DETACHABLE_ORDEREDHASH_NOCOPYASSIGN
