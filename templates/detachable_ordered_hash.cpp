@@ -23,7 +23,7 @@ namespace CubicleSoft
 		while (Str != StrEnd)
 		{
 			// Changes the official implementation.
-			y = *((std::uint32_t *)Str);
+			y = *((const std::uint32_t *)Str);
 
 			Result = ((Result << 5) + Result) ^ y;
 
@@ -72,7 +72,7 @@ namespace CubicleSoft
 		while (Str != StrEnd)
 		{
 			// Minor change to the official implementation.  (Does endianness actually matter?)
-			y = *((std::uint64_t *)Str);
+			y = *((const std::uint64_t *)Str);
 
 			v3 ^= y;
 

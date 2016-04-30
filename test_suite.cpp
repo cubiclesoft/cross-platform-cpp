@@ -1,13 +1,17 @@
 // Cross-platform test suite.
-// (C) 2013 CubicleSoft.  All Rights Reserved.
+// (C) 2015 CubicleSoft.  All Rights Reserved.
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <cinttypes>
 
 #include "test.h"
+
+// Must be first to avoid Winsock 2 issues.
+//#include "network/network_server.h"
 
 #include "convert/convert_int.h"
 #include "security/security_csprng.h"
@@ -23,8 +27,12 @@
 #include "templates/detachable_queue.h"
 #include "templates/static_vector.h"
 #include "templates/static_2d_array.h"
+#include "environment/environment_appinfo.h"
 #include "utf8/utf8_util.h"
+#include "utf8/utf8_appinfo.h"
 #include "utf8/utf8_file_dir.h"
+//#include "network/network_init.h"
+//#include "network/network_async_helper.h"
 
 // Test global instantiations for crash bugs.
 CubicleSoft::Security::CSPRNG GxSecurityCSPRNG(false);
@@ -41,6 +49,9 @@ CubicleSoft::StaticVector<int> GxStaticVector(10);
 CubicleSoft::Static2DArray<int> GxStatic2DArray(20, 2);
 CubicleSoft::UTF8::File GxFile;
 CubicleSoft::UTF8::Dir GxDir;
+//CubicleSoft::Network::Init GxNetworkInit;
+//CubicleSoft::Network::AsyncHelper GxAsyncHelper;
+//CubicleSoft::Network::Server GxServer;
 
 int Test_Convert_Int(FILE *Testfp)
 {
@@ -727,6 +738,83 @@ int Test_Sync_TLS(FILE *Testfp)
 	TEST_RETURN();
 }
 
+int Test_Environment_AppInfo(FILE *Testfp)
+{
+	TEST_START(Test_Environment_AppInfo);
+
+	bool x;
+	CubicleSoft::Environment::ProcessIDType CurrProcessID;
+	CubicleSoft::Environment::ThreadIDType CurrThreadID;
+	std::uint64_t CurrMicrosecond;
+
+	CurrProcessID = CubicleSoft::Environment::AppInfo::GetCurrentProcessID();
+	printf("\tCurrent process ID:  %u\n", (unsigned int)CurrProcessID);
+	x = ((int)CurrProcessID != 0);
+	TEST_COMPARE(x, 1);
+
+	CurrThreadID = CubicleSoft::Environment::AppInfo::GetCurrentThreadID();
+	printf("\tCurrent thread ID:  %u\n", (unsigned int)CurrThreadID);
+	x = ((int)CurrThreadID != 0);
+	TEST_COMPARE(x, 1);
+
+	CurrMicrosecond = CubicleSoft::Environment::AppInfo::GetUnixMicrosecondTime();
+	printf("\tCurrent UNIX microsecond:  %u\n", (unsigned int)CurrMicrosecond);
+	x = (CurrMicrosecond != 0);
+	TEST_COMPARE(x, 1);
+
+	TEST_SUMMARY();
+
+	TEST_RETURN();
+}
+
+int Test_UTF8_AppInfo(FILE *Testfp, const char *Argv0)
+{
+	TEST_START(Test_UTF8_AppInfo);
+
+	bool x;
+	char TempBuffer[1024];
+	size_t y;
+
+	y = sizeof(TempBuffer);
+	x = CubicleSoft::UTF8::AppInfo::GetExecutableFilename(TempBuffer, y, Argv0);
+	printf("\tCurrent executable filename:  %s\n", TempBuffer);
+	TEST_COMPARE(x, 1);
+
+	y = sizeof(TempBuffer);
+	x = CubicleSoft::UTF8::AppInfo::GetExecutablePath(TempBuffer, y, Argv0);
+	printf("\tCurrent executable path:  %s\n", TempBuffer);
+	TEST_COMPARE(x, 1);
+
+	y = sizeof(TempBuffer);
+	x = CubicleSoft::UTF8::AppInfo::GetSystemAppStorageDir(TempBuffer, y);
+	printf("\tCurrent system application storage path:  %s\n", TempBuffer);
+	TEST_COMPARE(x, 1);
+
+	y = sizeof(TempBuffer);
+	x = CubicleSoft::UTF8::AppInfo::GetSystemAppStorageDir(TempBuffer, y, "test_suite");
+	printf("\tCurrent system application-specific storage path:  %s\n", TempBuffer);
+	TEST_COMPARE(x, 1);
+
+	y = sizeof(TempBuffer);
+	x = CubicleSoft::UTF8::AppInfo::GetCurrentUserAppStorageDir(TempBuffer, y);
+	printf("\tCurrent user application storage path:  %s\n", TempBuffer);
+	TEST_COMPARE(x, 1);
+
+	y = sizeof(TempBuffer);
+	x = CubicleSoft::UTF8::AppInfo::GetCurrentUserAppStorageDir(TempBuffer, y, "test_suite");
+	printf("\tCurrent user application-specific storage path:  %s\n", TempBuffer);
+	TEST_COMPARE(x, 1);
+
+	y = sizeof(TempBuffer);
+	x = CubicleSoft::UTF8::AppInfo::GetTempStorageDir(TempBuffer, y);
+	printf("\tCurrent temporary file storage path:  %s\n", TempBuffer);
+	TEST_COMPARE(x, 1);
+
+	TEST_SUMMARY();
+
+	TEST_RETURN();
+}
+
 int Test_UTF8_File(FILE *Testfp)
 {
 	TEST_START(Test_UTF8_File);
@@ -872,6 +960,8 @@ int main(int argc, char **argv)
 		Test_Templates_StaticVector(stdout);
 		Test_Templates_Static2DArray(stdout);
 		Test_Sync_TLS(stdout);
+		Test_Environment_AppInfo(stdout);
+		Test_UTF8_AppInfo(stdout, argv[0]);
 		Test_UTF8_File(stdout);
 		Test_UTF8_Dir(stdout);
 	}
@@ -1052,7 +1142,7 @@ int main(int argc, char **argv)
 			}
 
 			CubicleSoft::Convert::Int::ToString(HashesDone, 100, (std::uint64_t)(x / 3), ',');
-			printf("\n\t%d - %s hashes/sec", y2, HashesDone);
+			printf("\n\t%u - %s hashes/sec", (unsigned int)y2, HashesDone);
 		}
 
 		printf("\n\n");
@@ -1073,7 +1163,7 @@ int main(int argc, char **argv)
 			}
 
 			CubicleSoft::Convert::Int::ToString(HashesDone, 100, (std::uint64_t)(x / 3), ',');
-			printf("\n\t%d - %s hashes/sec", y2, HashesDone);
+			printf("\n\t%u - %s hashes/sec", (unsigned int)y2, HashesDone);
 		}
 
 		printf("\n\n");
@@ -1338,9 +1428,154 @@ int main(int argc, char **argv)
 
 		printf("\n\n");
 	}
+	else if (!strcmp("server", argv[1]))
+	{
+/*
+		// Initialize networking.
+		CubicleSoft::Network::Init TempInit;
+
+		if (!TempInit.Started())
+		{
+			printf("Networking failed to initialize.\n");
+
+			return 1;
+		}
+
+		// Initialize the async helper.
+		CubicleSoft::Network::AsyncHelper TempHelper;
+
+		if (!TempHelper.Initialized())
+		{
+			printf("Asynchronous helper failed to initialize.\n");
+
+			return 1;
+		}
+
+		// Start a TCP/IP server.
+		CubicleSoft::Network::Server TempServer;
+
+		if (!TempServer.SetAsyncHelperInfo(TempHelper, 1, 2))
+		{
+			// This should never happen.
+			printf("Failed to set the asynchronous helper.\n");
+
+			return 1;
+		}
+
+		if (!TempServer.Start(CubicleSoft::Network::Server::ModeTCP, NULL, 7890))
+		{
+			printf("Failed to start TCP server on port 7890.\n");
+
+			return 1;
+		}
+
+		// Begin accepting connections.
+		if (!TempServer.BeginAccept())
+		{
+			printf("Failed to start accepting connections on port 7890.\n");
+
+			return 1;
+		}
+
+		// Enter the main processing loop.
+		printf("Echo server started on port 7890.\n");
+		CubicleSoft::Network::AsyncHelperNode *HelperNode;
+		CubicleSoft::QueueNoCopy<std::int64_t> ClientNums;
+		CubicleSoft::QueueNode<std::int64_t> *ClientNum;
+		do
+		{
+			// Wait until something happens.
+			if (TempServer.ProcessWait(TempHelper.Wait(TempServer.GetMaxWait())))
+			{
+				// Queue up remaining waiting packets until either an error occurs or no packets are left.
+				while ((HelperNode = TempHelper.Wait(0)) != NULL)
+				{
+					TempServer.ProcessWait(HelperNode);
+				}
+
+				// Handle new connections.
+				if (TempServer.GetConnected(ClientNums))
+				{
+					ClientNum = ClientNums.First();
+					while (ClientNum != NULL)
+					{
+						printf("Client %" PRId64 " connected.\n", ClientNum->Value);
+
+						ClientNum = ClientNum->Next();
+					}
+
+					TempServer.Release(ClientNums);
+				}
+
+				// Handle disconnects.
+				if (TempServer.GetDisconnected(ClientNums))
+				{
+					ClientNum = ClientNums.First();
+					while (ClientNum != NULL)
+					{
+						TempServer.Disconnect(ClientNum->Value);
+
+						printf("Client %" PRId64 " disconnected.\n", ClientNum->Value);
+
+						ClientNum = ClientNum->Next();
+					}
+
+					TempServer.Release(ClientNums);
+				}
+
+				// Disallow clients to remain inactive (30 second timeout).
+				if (TempServer.GetInactive(ClientNums, 30))
+				{
+					ClientNum = ClientNums.First();
+					while (ClientNum != NULL)
+					{
+						TempServer.Disconnect(ClientNum->Value);
+
+						printf("Client %" PRId64 " timed out.\n", ClientNum->Value);
+
+						ClientNum = ClientNum->Next();
+					}
+
+					TempServer.Release(ClientNums);
+				}
+
+				// Read data and echo it back to the client.
+				if (TempServer.GetReadReady(ClientNums))
+				{
+					ClientNum = ClientNums.First();
+					while (ClientNum != NULL)
+					{
+						char TempBuffer[1024];
+						size_t BufferSize;
+
+						printf("Client %" PRId64 ":  %d bytes ready\n", ClientNum->Value, TempServer.GetReadBytesReady(ClientNum->Value));
+
+						if (TempServer.Read(ClientNum->Value, (std::uint8_t *)TempBuffer, sizeof(TempBuffer) - 1, &BufferSize))
+						{
+							TempBuffer[BufferSize] = '\0';
+							printf("Received:  %s\n", TempBuffer);
+
+							TempServer.Write(ClientNum->Value, (std::uint8_t *)TempBuffer, BufferSize);
+						}
+
+						ClientNum = ClientNum->Next();
+					}
+
+					TempServer.Release(ClientNums);
+				}
+
+				// Ignore write ready notifications.
+				if (TempServer.GetWriteReady(ClientNums))  TempServer.Release(ClientNums);
+			}
+
+			// Allow more connections and perform periodic garbage collection.
+			TempServer.BeginAccept();
+		} while (1);
+*/
+	}
 	else
 	{
-		printf("Unknown benchmark specified.\n");
+		printf("Unknown benchmark/option specified.\n");
 	}
 
 	return 0;

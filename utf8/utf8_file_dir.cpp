@@ -97,7 +97,7 @@ namespace CubicleSoft
 
 			// Verify and retrieve a UTF-16 version of the filename.
 			WCHAR Filename2[8192];
-			if (!GetWindowsPlatformFilename(Filename2, 8192, Filename))  return false;
+			if (!GetWindowsPlatformFilename(Filename2, 8192, Filename, (Flags & O_UNSAFE) != 0))  return false;
 
 			// Open the file.
 			SECURITY_ATTRIBUTES SecAttr;
@@ -120,7 +120,7 @@ namespace CubicleSoft
 				else if (Flags & O_APPEND)
 				{
 					UpdateMaxPos();
-					Seek(SeekEnd, 0);
+					Seek(File::SeekEnd, 0);
 				}
 				else
 				{
@@ -220,7 +220,7 @@ namespace CubicleSoft
 			return true;
 		}
 
-		bool File::GetPlatformFilename(char *Result, size_t ResultSize, const char *Filename)
+		bool File::GetPlatformFilename(char *Result, size_t ResultSize, const char *Filename, bool AllowUnsafe)
 		{
 			// Check for invalid characters and strings (restricted device names) in the path/filename.  Replace '/' with '\'.
 			char TempCP;
@@ -235,9 +235,9 @@ namespace CubicleSoft
 				if (Result[x] == '/')  Result[x] = '\\';
 			}
 
-			// Disallow direct device access for security reasons.
+			// Generally disallow direct device access for security reasons.
 			if (!strncmp(Result, "\\??\\", 4))  Result[1] = '\\';
-			if (!_strnicmp(Result, "\\\\?\\Device\\", 11) || !strncmp(Result, "\\\\.\\", 4))  return false;
+			if (!_strnicmp(Result, "\\\\?\\Device\\", 11) || !strncmp(Result, "\\\\.\\", 4))  return AllowUnsafe;
 
 			bool UNCPath = false, UnicodePath = false, DriveLetter = false;
 			if (!_strnicmp(Result, "\\\\?\\UNC\\", 8))
@@ -501,11 +501,11 @@ namespace CubicleSoft
 			return true;
 		}
 
-		bool File::GetWindowsPlatformFilename(LPWSTR Result, size_t ResultSize, const char *Filename)
+		bool File::GetWindowsPlatformFilename(LPWSTR Result, size_t ResultSize, const char *Filename, bool AllowUnsafe)
 		{
 			char Filename2[8192];
 
-			if (!GetPlatformFilename(Filename2, 8192, Filename))  return false;
+			if (!GetPlatformFilename(Filename2, 8192, Filename, AllowUnsafe))  return false;
 
 			Util::ConvertFromUTF8((std::uint8_t *)Filename2, strlen(Filename2) + 1, Result, ResultSize, sizeof(WCHAR));
 
@@ -1341,7 +1341,7 @@ namespace CubicleSoft
 			return true;
 		}
 
-		bool File::GetPlatformFilename(char *Result, size_t ResultSize, const char *Filename)
+		bool File::GetPlatformFilename(char *Result, size_t ResultSize, const char *Filename, bool)
 		{
 			// Check for invalid characters in the path/filename.  Replace '\' with '/'.
 			char TempCP;
@@ -1809,7 +1809,7 @@ namespace CubicleSoft
 		// All platforms.
 		bool File::Write(const char *Data, size_t &DataWritten)
 		{
-			return Write((std::uint8_t *)Data, strlen(Data), DataWritten);
+			return Write((const std::uint8_t *)Data, strlen(Data), DataWritten);
 		}
 
 		bool File::IsValidFilenameFormat(const char *Filename)

@@ -90,7 +90,7 @@ namespace CubicleSoft
 
 			size_t x, y = Width * Height;
 			for (x = 0; x < y && baseptr[x] == TempArray.ptr[x]; x++);
-			if (x < Size)  return false;
+			if (x < y)  return false;
 
 			return true;
 		}

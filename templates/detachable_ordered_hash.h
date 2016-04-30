@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <cstring>
 
 namespace CubicleSoft
 {
@@ -40,7 +41,7 @@ namespace CubicleSoft
 			else
 			{
 				StrKey = new char[IntKey];
-				memcpy(StrKey, TempNode.StrKey, IntKey);
+				std::memcpy(StrKey, TempNode.StrKey, IntKey);
 			}
 
 			Value = TempNode.Value;
@@ -59,7 +60,7 @@ namespace CubicleSoft
 				else
 				{
 					StrKey = new char[IntKey];
-					memcpy(StrKey, TempNode.StrKey, IntKey);
+					std::memcpy(StrKey, TempNode.StrKey, IntKey);
 				}
 
 				Value = TempNode.Value;
@@ -104,7 +105,7 @@ namespace CubicleSoft
 					StrKey = new char[NewStrLen];
 				}
 
-				memcpy(StrKey, NewStrKey, NewStrLen);
+				std::memcpy(StrKey, NewStrKey, NewStrLen);
 			}
 
 			IntKey = (std::int64_t)NewStrLen;

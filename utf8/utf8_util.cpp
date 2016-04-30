@@ -14,7 +14,7 @@ namespace CubicleSoft
 
 			if (SrcWidth == 1)
 			{
-				std::uint8_t *SrcData2 = (std::uint8_t *)SrcData;
+				const std::uint8_t *SrcData2 = (const std::uint8_t *)SrcData;
 
 				do
 				{
@@ -23,7 +23,7 @@ namespace CubicleSoft
 			}
 			else if (SrcWidth == 2)
 			{
-				uint16_t *SrcData2 = (uint16_t *)SrcData;
+				const uint16_t *SrcData2 = (const uint16_t *)SrcData;
 
 				do
 				{
@@ -32,7 +32,7 @@ namespace CubicleSoft
 			}
 			else if (SrcWidth == 4)
 			{
-				std::uint32_t *SrcData2 = (std::uint32_t *)SrcData;
+				const std::uint32_t *SrcData2 = (const std::uint32_t *)SrcData;
 
 				do
 				{
@@ -54,12 +54,12 @@ namespace CubicleSoft
 			void *DestData;
 
 			x = strlen(SrcData);
-			ConvertFromUTF8((std::uint8_t *)SrcData, x, NULL, y, DestWidth);
+			ConvertFromUTF8((const std::uint8_t *)SrcData, x, NULL, y, DestWidth);
 			if (DestWidth == 1)  DestData = new std::uint8_t[y];
 			else if (DestWidth == 2)  DestData = new uint16_t[y];
 			else if (DestWidth == 4)  DestData = new std::uint32_t[y];
 			else  return NULL;
-			ConvertFromUTF8((std::uint8_t *)SrcData, x, DestData, y, DestWidth);
+			ConvertFromUTF8((const std::uint8_t *)SrcData, x, DestData, y, DestWidth);
 
 			return DestData;
 		}
@@ -134,7 +134,7 @@ namespace CubicleSoft
 
 			if (SrcWidth == 1)
 			{
-				std::uint8_t *SrcData2 = (std::uint8_t *)SrcData;
+				const std::uint8_t *SrcData2 = (const std::uint8_t *)SrcData;
 
 				x = 0;
 				while (x < SrcDataSize)
@@ -169,7 +169,7 @@ namespace CubicleSoft
 			}
 			else if (SrcWidth == 2)
 			{
-				uint16_t *SrcData2 = (uint16_t *)SrcData;
+				const uint16_t *SrcData2 = (const uint16_t *)SrcData;
 
 				x = 0;
 				for (x = 0; x < SrcDataSize; x++)
@@ -193,7 +193,7 @@ namespace CubicleSoft
 			}
 			else if (SrcWidth == 4)
 			{
-				std::uint32_t *SrcData2 = (std::uint32_t *)SrcData;
+				const std::uint32_t *SrcData2 = (const std::uint32_t *)SrcData;
 
 				for (x = 0; x < SrcDataSize; x++)
 				{
@@ -330,7 +330,7 @@ namespace CubicleSoft
 
 		bool Util::NextCodePoint(std::uint32_t &ResultCP, std::uint32_t &NextCP, const char *Str, size_t &Pos, size_t &Size, bool &HasCombiningCP)
 		{
-			std::uint8_t *Str2 = (std::uint8_t *)Str;
+			const std::uint8_t *Str2 = (const std::uint8_t *)Str;
 
 			if (Pos)
 			{

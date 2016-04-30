@@ -56,6 +56,13 @@
 	#define O_APPEND      02000
 #endif
 
+// O_UNSAFE allows for devices to be opened for raw reading/writing.
+#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+	#ifndef O_UNSAFE
+		#define O_UNSAFE      04000
+	#endif
+#endif
+
 #ifndef _S_IFLNK
 	#ifdef S_IFLNK
 		#define _S_IFLNK   S_IFLNK
@@ -125,7 +132,7 @@ namespace CubicleSoft
 			virtual bool Close();
 
 			// Some static functions specifically for files.
-			static bool GetPlatformFilename(char *Result, size_t ResultSize, const char *Filename);
+			static bool GetPlatformFilename(char *Result, size_t ResultSize, const char *Filename, bool AllowUnsafe = false);
 			static bool IsValidFilenameFormat(const char *Filename);
 			static void GetPlatformFilenameInfo(FilenameInfo &Result, const char *Filename);
 			static bool GetAbsoluteFilename(char *Result, size_t ResultSize, const char *BaseDir, const char *Filename, bool TrailingSlash = false);
@@ -151,7 +158,7 @@ namespace CubicleSoft
 
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
 public:
-			static bool GetWindowsPlatformFilename(LPWSTR Result, size_t ResultSize, const char *Filename);
+			static bool GetWindowsPlatformFilename(LPWSTR Result, size_t ResultSize, const char *Filename, bool AllowUnsafe = false);
 			static bool GetWindowsFilenameInfo(BY_HANDLE_FILE_INFORMATION *Result, LPWSTR Filename);
 private:
 			static FILETIME ConvertUnixMicrosecondTimeToFILETIME(std::uint64_t TempTime);
