@@ -20,15 +20,18 @@ Features
 
 * Small object files.  Just a few KB each for the most part.
 * Very few interdependencies.
-* Integer to string conversion.  With file size options as well (MB, GB, etc).
-* Cross-platform CSPRNG.
 * Cross-platform, cross-process, named:  Mutex, semaphore, event, and reader-writer objects.
 * Cross-platform, thread local temporary memory management via Sync::TLS.  Sync::TLS outperforms system malloc()/free()!  (See Notes)
-* Cache support.  A C++ template that implements a partial hash.
+* Cross-platform CSPRNG.
 * Detachable node queue, linked list, and ordered hash(!) implementations.  (See Notes)
+* Cache support.  A C++ template that implements a partial hash.
 * Static vector implementation.
+* Integer to string conversion.  With file size options as well (i.e. MB, GB, etc).
 * Minimal Unicode conversion support.
 * Cross-platform, UTF-8 file and directory manipulation classes.
+* Cross-platform, UTF-8 storage location functions (e.g. a user's home folder).
+* FastFind and FastReplace templates.  Works on any binary data.  FastFind probably outperforms std::search (See Notes).  FastReplace supports alternate allocators (e.g. Sync::TLS) and comparison functions (e.g. case-insensitive comparison).
+* Variable data storage via StaticMixedVar, UTF8::UTF8MixedVar, and Sync::TLS::MixedVar.  For when you want lightweight dynamic typing with basic string support or just want to avoid std::string.
 * Has a liberal open source license.  MIT or LGPL, your choice.
 * Designed for relatively painless integration into your project.
 * Sits on GitHub for all of that pull request and issue tracker goodness to easily submit changes and ideas respectively.
@@ -81,3 +84,5 @@ In testing, Sync::TLS outperformed system malloc()/free() by a factor of 1.8 to 
 There are three very slow operations in all programs:  External data access (e.g. hard drive, network), memory allocations, and system calls - in that order.  Detachable nodes in data structures help mitigate the second problem.
 
 The detachable node ordered hash is similar to PHP arrays.  It accepts both integer and string keys in the same hash, has almost constant time insert, lookup, delete, and iteration operations, and, most importantly, maintains the desired order of elements.  This is the last std::map-like C++ data structure you will ever need.
+
+FastFind has an average case (and probably worst case) of O(5n) or better, which is implicitly better than the naive std::search() O(m * n).  Up to five "points of interest" are located in the pattern - beginning, end, two minimal values, and one midpoint - to minimize the number of compares before performing the full comparison.  This approach mitigates security vulnerabilities in naive implementations while simultaneously outperforming most alternate algorithms including Knuth-Morris-Pratt and Boyer–Moore that construct a lookup table (i.e. allocate memory - a rather sluggish operation not needed for the average string search).
