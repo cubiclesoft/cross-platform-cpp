@@ -35,7 +35,7 @@ namespace CubicleSoft
 			if (y >= sizeof(Filename) / sizeof(WCHAR) - 1)  return false;
 			Filename[y] = L'\0';
 
-			Util::ConvertToUTF8(Filename, y, sizeof(WCHAR), (std::uint8_t *)Buffer, z);
+			Util::ConvertToUTF8(Filename, y + 1, sizeof(WCHAR), (std::uint8_t *)Buffer, z);
 			if (z == z2)  return false;
 			BufferSize = z;
 
@@ -232,7 +232,7 @@ namespace CubicleSoft
 			if (!GetExecutableFilename(Buffer, BufferSize, Argv0))  return false;
 
 			while (BufferSize && Buffer[BufferSize - 1] != '/' && Buffer[BufferSize - 1] != '\\')  BufferSize--;
-			Buffer[BufferSize] = '\0';
+			Buffer[BufferSize++] = '\0';
 
 			return true;
 		}
