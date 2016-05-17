@@ -2,6 +2,7 @@
 // (C) 2013 CubicleSoft.  All Rights Reserved.
 
 #include "sync_tls.h"
+#include "../templates/fast_find_replace.h"
 #include <cstdlib>
 #include <cstring>
 #include <new>
@@ -57,6 +58,9 @@ namespace CubicleSoft
 		// All platforms.
 		bool TLS::ThreadInit(size_t MaxCacheBits)
 		{
+			StaticVector<Queue<char>> *MainPtr = GetMainPtr();
+			if (MainPtr != NULL)  return true;
+
 			return SetMainPtr(new StaticVector<Queue<char>>(MaxCacheBits));
 		}
 
@@ -156,6 +160,8 @@ namespace CubicleSoft
 
 		void TLS::free(void *Data, bool Cache)
 		{
+			if (Data == NULL)  return;
+
 			StaticVector<Queue<char>> *MainPtr = GetMainPtr();
 			if (MainPtr == NULL)  return;
 
@@ -227,6 +233,7 @@ namespace CubicleSoft
 			return Pos;
 		}
 
+
 		TLS::AutoFree::AutoFree(TLS *TLSPtr, void *Data)
 		{
 			MxTLS = TLSPtr;
@@ -236,6 +243,151 @@ namespace CubicleSoft
 		TLS::AutoFree::~AutoFree()
 		{
 			MxTLS->free(MxData);
+		}
+
+
+		TLS::MixedVar::MixedVar(TLS *TLSPtr) : MxMode(TMV_None), MxInt(0), MxDouble(0.0), MxStr(NULL), MxStrPos(0), MxTLS(TLSPtr)
+		{
+		}
+
+		TLS::MixedVar::~MixedVar()
+		{
+			if (MxStr != NULL)  MxTLS->free(MxStr);
+		}
+
+		// Copy constructor.
+		TLS::MixedVar::MixedVar(const TLS::MixedVar &TempVar)
+		{
+			MxTLS = TempVar.MxTLS;
+
+			if (TempVar.MxStr != NULL)  SetData(TempVar.MxStr, TempVar.MxStrPos);
+			else
+			{
+				MxStr = NULL;
+				MxStrPos = 0;
+			}
+
+			MxMode = TempVar.MxMode;
+			MxInt = TempVar.MxInt;
+			MxDouble = TempVar.MxDouble;
+		}
+
+		// Assignment operator.
+		TLS::MixedVar &TLS::MixedVar::operator=(const TLS::MixedVar &TempVar)
+		{
+			if (this != &TempVar)
+			{
+				MxTLS = TempVar.MxTLS;
+
+				if (TempVar.MxStr != NULL)  SetData(TempVar.MxStr, TempVar.MxStrPos);
+				else
+				{
+					MxTLS->free(MxStr);
+
+					MxStr = NULL;
+					MxStrPos = 0;
+				}
+
+				MxMode = TempVar.MxMode;
+				MxInt = TempVar.MxInt;
+				MxDouble = TempVar.MxDouble;
+			}
+
+			return *this;
+		}
+
+		void TLS::MixedVar::SetData(const char *str, size_t size)
+		{
+			MxMode = TMV_Str;
+			if (MxStr != NULL)  MxTLS->free(MxStr);
+			MxStr = (char *)MxTLS->malloc(size + 1);
+			memcpy(MxStr, str, size);
+			MxStrPos = size;
+			MxStr[MxStrPos] = '\0';
+		}
+
+		void TLS::MixedVar::SetStr(const char *str)
+		{
+			SetData(str, strlen(str));
+		}
+
+		void TLS::MixedVar::PrependData(const char *str, size_t size)
+		{
+			char *str2 = (char *)MxTLS->malloc(size + MxStrPos + 1);
+			memcpy(str2, str, size);
+			memcpy(str2 + size, MxStr, MxStrPos);
+			MxTLS->free(MxStr);
+			MxStr = str2;
+			MxStrPos += size;
+			MxStr[MxStrPos] = '\0';
+		}
+
+		void TLS::MixedVar::PrependStr(const char *str)
+		{
+			PrependData(str, strlen(str));
+		}
+
+		void TLS::MixedVar::AppendData(const char *str, size_t size)
+		{
+			MxStr = (char *)MxTLS->realloc(MxStr, MxStrPos + size + 1);
+			memcpy(MxStr + MxStrPos, str, size);
+			MxStrPos += size;
+			MxStr[MxStrPos] = '\0';
+		}
+
+		void TLS::MixedVar::AppendStr(const char *str)
+		{
+			AppendData(str, strlen(str));
+		}
+
+		void TLS::MixedVar::AppendChar(char chr)
+		{
+			MxStr = (char *)MxTLS->realloc(MxStr, MxStrPos + 2);
+			MxStr[MxStrPos++] = chr;
+			MxStr[MxStrPos] = '\0';
+		}
+
+		void TLS::MixedVar::AppendMissingChar(char chr)
+		{
+			if (!MxStrPos || MxStr[MxStrPos - 1] != chr)  AppendChar(chr);
+		}
+
+		void TLS::MixedVar::SetSize(size_t pos)
+		{
+			if (MxStrPos < pos)  MxStr = (char *)MxTLS->realloc(MxStr, pos + 1);
+
+			MxStrPos = pos;
+			MxStr[MxStrPos] = '\0';
+		}
+
+		size_t TLS::MixedVar::ReplaceData(const char *src, size_t srcsize, const char *dest, size_t destsize)
+		{
+			size_t Num;
+
+			if (srcsize < destsize)
+			{
+				char *Result;
+				size_t ResultSize;
+
+				Num = FastReplaceAlloc<char, TLS>::ReplaceAll(Result, ResultSize, MxStr, MxStrPos, src, srcsize, dest, destsize, MxTLS);
+
+				MxTLS->free(MxStr);
+				MxStr = Result;
+				MxStrPos = ResultSize;
+			}
+			else
+			{
+				Num = FastReplaceAlloc<char, TLS>::StaticReplaceAll(MxStr, MxStrPos, MxStr, MxStrPos, src, srcsize, dest, destsize, MxTLS);
+			}
+
+			MxStr[MxStrPos] = '\0';
+
+			return Num;
+		}
+
+		size_t TLS::MixedVar::ReplaceStr(const char *src, const char *dest)
+		{
+			return ReplaceData(src, strlen(src), dest, strlen(dest));
 		}
 	}
 }
