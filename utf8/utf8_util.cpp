@@ -7,7 +7,7 @@ namespace CubicleSoft
 {
 	namespace UTF8
 	{
-		char *Util::ConvertToUTF8(const void *SrcData, size_t SrcWidth, size_t *LastPos)
+		char *Util::ConvertToUTF8(const void *SrcData, size_t SrcWidth, size_t *LastPos, void *AltMallocManager, void *(*AltMalloc)(void *, size_t))
 		{
 			size_t x = 0, y;
 			std::uint8_t *DestData;
@@ -42,22 +42,22 @@ namespace CubicleSoft
 			else  return NULL;
 
 			ConvertToUTF8(SrcData, x, SrcWidth, NULL, y, NULL);
-			DestData = new std::uint8_t[y];
+			DestData = (AltMalloc != NULL ? (std::uint8_t *)AltMalloc(AltMallocManager, y) : new std::uint8_t[y]);
 			ConvertToUTF8(SrcData, x, SrcWidth, DestData, y, LastPos);
 
 			return (char *)DestData;
 		}
 
-		void *Util::ConvertFromUTF8(const char *SrcData, size_t DestWidth)
+		void *Util::ConvertFromUTF8(const char *SrcData, size_t DestWidth, void *AltMallocManager, void *(*AltMalloc)(void *, size_t))
 		{
 			size_t x, y;
 			void *DestData;
 
 			x = strlen(SrcData);
 			ConvertFromUTF8((const std::uint8_t *)SrcData, x, NULL, y, DestWidth);
-			if (DestWidth == 1)  DestData = new std::uint8_t[y];
-			else if (DestWidth == 2)  DestData = new uint16_t[y];
-			else if (DestWidth == 4)  DestData = new std::uint32_t[y];
+			if (DestWidth == 1)  DestData = (AltMalloc != NULL ? (std::uint8_t *)AltMalloc(AltMallocManager, y) : new std::uint8_t[y]);
+			else if (DestWidth == 2)  DestData = (AltMalloc != NULL ? (std::uint16_t *)AltMalloc(AltMallocManager, y * sizeof(uint16_t)) : new uint16_t[y]);
+			else if (DestWidth == 4)  DestData = (AltMalloc != NULL ? (std::uint32_t *)AltMalloc(AltMallocManager, y * sizeof(uint32_t)) : new std::uint32_t[y]);
 			else  return NULL;
 			ConvertFromUTF8((const std::uint8_t *)SrcData, x, DestData, y, DestWidth);
 

@@ -1,5 +1,5 @@
 // Cross-platform UTF-8 string conversion and lightweight parser utilities.
-// (C) 2013 CubicleSoft.  All Rights Reserved.
+// (C) 2016 CubicleSoft.  All Rights Reserved.
 
 #ifndef CUBICLESOFT_UTF8_UTIL
 #define CUBICLESOFT_UTF8_UTIL
@@ -20,8 +20,9 @@ namespace CubicleSoft
 			// For example, SrcWidth and DestWidth might be sizeof(TCHAR) on Windows for a (TCHAR *) string.
 
 			// Generally avoid these for small buffers.  Small, exact memory allocations = bad.
-			static char *ConvertToUTF8(const void *SrcData, size_t SrcWidth, size_t *LastPos = NULL);
-			static void *ConvertFromUTF8(const char *SrcData, size_t DestWidth);
+			// Check out Sync::TLS for a higher-performance allocator.
+			static char *ConvertToUTF8(const void *SrcData, size_t SrcWidth, size_t *LastPos = NULL, void *AltMallocManager = NULL, void *(*AltMalloc)(void *, size_t) = NULL);
+			static void *ConvertFromUTF8(const char *SrcData, size_t DestWidth, void *AltMallocManager = NULL, void *(*AltMalloc)(void *, size_t) = NULL);
 
 			// More efficient for small buffers.
 			static void ConvertToUTF8(const void *SrcData, size_t SrcDataSize, size_t SrcWidth, std::uint8_t *DestData, size_t &DestDataSize, size_t *LastPos = NULL);
