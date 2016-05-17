@@ -27,10 +27,13 @@
 #include "templates/detachable_queue.h"
 #include "templates/static_vector.h"
 #include "templates/static_2d_array.h"
+#include "templates/static_mixed_var.h"
+#include "templates/fast_find_replace.h"
 #include "environment/environment_appinfo.h"
 #include "utf8/utf8_util.h"
 #include "utf8/utf8_appinfo.h"
 #include "utf8/utf8_file_dir.h"
+#include "utf8/utf8_mixed_var.h"
 //#include "network/network_init.h"
 //#include "network/network_async_helper.h"
 
@@ -41,14 +44,19 @@ CubicleSoft::Sync::Mutex GxSyncMutex;
 CubicleSoft::Sync::Semaphore GxSyncSemaphore;
 CubicleSoft::Sync::ReadWriteLock GxSyncReadWriteLock;
 CubicleSoft::Sync::TLS GxSyncTLS;
+CubicleSoft::Sync::TLS::MixedVar GxSyncTLSMixedVar;
 CubicleSoft::Cache<int, int> GxCache(11);
 CubicleSoft::List<int> GxList;
 CubicleSoft::OrderedHash<int> GxOrderedHash(47);
 CubicleSoft::Queue<int> GxQueue;
 CubicleSoft::StaticVector<int> GxStaticVector(10);
 CubicleSoft::Static2DArray<int> GxStatic2DArray(20, 2);
-CubicleSoft::UTF8::File GxFile;
-CubicleSoft::UTF8::Dir GxDir;
+CubicleSoft::StaticMixedVar<char[8192]> GxStaticMixedVar;
+CubicleSoft::FastFind<char> GxFastFind;
+CubicleSoft::FastReplace<char> GxFastReplace;
+CubicleSoft::UTF8::File GxUTF8File;
+CubicleSoft::UTF8::Dir GxUTF8Dir;
+CubicleSoft::UTF8::UTF8MixedVar<char[8192]> GxUTF8MixedVar;
 //CubicleSoft::Network::Init GxNetworkInit;
 //CubicleSoft::Network::AsyncHelper GxAsyncHelper;
 //CubicleSoft::Network::Server GxServer;
@@ -708,6 +716,217 @@ int Test_Templates_Static2DArray(FILE *Testfp)
 	TEST_RETURN();
 }
 
+int Test_Templates_StaticMixedVar(FILE *Testfp)
+{
+	TEST_START(Test_Templates_StaticMixedVar);
+
+	CubicleSoft::StaticMixedVar<char[100]> TestMixedVar;
+	bool x;
+
+	x = TestMixedVar.IsNone();
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.SetBool(true);
+
+	x = TestMixedVar.IsBool();
+	TEST_COMPARE(x, 1);
+
+	x = TestMixedVar.GetBool();
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.SetBool(false);
+
+	x = TestMixedVar.GetBool();
+	TEST_COMPARE(x, 0);
+
+	TestMixedVar.SetInt(-5);
+
+	x = TestMixedVar.IsBool();
+	TEST_COMPARE(x, 0);
+
+	x = TestMixedVar.IsInt();
+	TEST_COMPARE(x, 1);
+
+	x = TestMixedVar.IsUInt();
+	TEST_COMPARE(x, 0);
+
+	// Not a boolean anymore (but uses MxInt).
+	x = TestMixedVar.GetBool();
+	TEST_COMPARE(x, 1);
+
+	x = (TestMixedVar.GetInt() == -5);
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.SetUInt(15);
+
+	x = TestMixedVar.IsInt();
+	TEST_COMPARE(x, 0);
+
+	x = TestMixedVar.IsUInt();
+	TEST_COMPARE(x, 1);
+
+	x = (TestMixedVar.GetInt() == 15);
+	TEST_COMPARE(x, 1);
+
+	x = (TestMixedVar.GetUInt() == 15);
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.SetDouble(150.7);
+
+	x = TestMixedVar.IsDouble();
+	TEST_COMPARE(x, 1);
+
+	// MxInt and MxDouble are two separate things.  Intentionally not a union.
+	x = (TestMixedVar.GetInt() == 15);
+	TEST_COMPARE(x, 1);
+
+	// Floating point is reliably bad.
+	x = (TestMixedVar.GetDouble() > 150.7 - 0.0001 && TestMixedVar.GetDouble() < 150.7 + 0.0001);
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.SetStr("");
+	TestMixedVar.SetStr("test");
+
+	x = TestMixedVar.IsStr();
+	TEST_COMPARE(x, 1);
+
+	x = (TestMixedVar.GetSize() == 4);
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.SetData("test\0test", 9);
+
+	x = (TestMixedVar.GetSize() == 9);
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.PrependStr("test");
+
+	x = (TestMixedVar.GetSize() == 13);
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.PrependData("test\0test", 9);
+
+	x = (TestMixedVar.GetSize() == 22);
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.AppendStr("test");
+
+	x = (TestMixedVar.GetSize() == 26);
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.AppendData("test\0test", 9);
+
+	x = (TestMixedVar.GetSize() == 35);
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.AppendChar('/');
+	TestMixedVar.AppendChar('/');
+	TestMixedVar.AppendChar('/');
+
+	x = (TestMixedVar.GetSize() == 38);
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.AppendMissingChar('/');
+	TestMixedVar.AppendMissingChar('a');
+
+	x = (TestMixedVar.GetSize() == 39);
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.RemoveTrailingChar('a');
+
+	while (TestMixedVar.RemoveTrailingChar('/'))  {}
+
+	x = (TestMixedVar.GetSize() == 35);
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.SetSize(1000);
+
+	x = (TestMixedVar.GetSize() == 35);
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.SetSize(26);
+
+	x = (TestMixedVar.GetSize() == 26);
+	TEST_COMPARE(x, 1);
+
+	x = (memcmp(TestMixedVar.GetStr(), "test\0testtesttest\0testtest", 26) == 0);
+	TEST_COMPARE(x, 1);
+
+	TEST_SUMMARY();
+
+	TEST_RETURN();
+}
+
+int Test_Templates_UTF8MixedVar(FILE *Testfp)
+{
+	TEST_START(Test_Templates_UTF8MixedVar);
+
+	CubicleSoft::UTF8::UTF8MixedVar<char[100]> TestMixedVar;
+	WCHAR TempData[100];
+	bool x;
+	size_t y;
+
+	TestMixedVar.SetUTF8(L"test", 4);
+
+	x = (TestMixedVar.GetSize() == 4);
+	TEST_COMPARE(x, 1);
+
+	y = sizeof(TempData) / sizeof(WCHAR);
+	TestMixedVar.ConvertFromUTF8(TempData, y);
+
+	x = (y == 5);
+	TEST_COMPARE(x, 1);
+
+	TestMixedVar.AppendUTF8(L"test");
+
+	x = (TestMixedVar.GetSize() == 8);
+	TEST_COMPARE(x, 1);
+
+	TEST_SUMMARY();
+
+	TEST_RETURN();
+}
+
+int Test_Templates_FastFindReplace(FILE *Testfp)
+{
+	TEST_START(Test_Templates_FastFindReplace);
+
+	char *TempStr;
+	CubicleSoft::StaticMixedVar<char[100]> TempBuffer, TempBuffer2;
+	bool x;
+	size_t y;
+
+	TempBuffer.SetStr("This is a test.");
+
+	x = (CubicleSoft::FastReplace<char>::ReplaceAll(TempStr, y, TempBuffer.GetStr(), TempBuffer.GetSize(), "test", 4, "success", 7) == 1);
+	TempStr[y] = '\0';
+	TEST_COMPARE(x, 1);
+
+	delete[] TempStr;
+
+	y = TempBuffer2.GetMaxSize();
+	x = (CubicleSoft::FastReplace<char>::StaticReplaceAll(TempBuffer2.GetStr(), y, TempBuffer.GetStr(), TempBuffer.GetSize(), "test", 4, "success", 7) == 1);
+	TempBuffer2.SetSize(y);
+	TEST_COMPARE(x, 1);
+
+	TempBuffer.SetStr("This is a test with a @LONGERTOKEN@.");
+
+	y = TempBuffer2.GetMaxSize();
+	x = (CubicleSoft::FastReplace<char>::StaticReplaceAll(TempBuffer2.GetStr(), y, TempBuffer.GetStr(), TempBuffer.GetSize(), "@LONGERTOKEN@", (size_t)-1, "long replacement string", (size_t)-1) == 1);
+	TempBuffer2.SetSize(y);
+	TEST_COMPARE(x, 1);
+
+	TempBuffer.SetStr("This is a test with a @REALLYLONGTOKEN@.");
+
+	y = TempBuffer2.GetMaxSize();
+	x = (CubicleSoft::FastReplace<char>::StaticReplaceAll(TempBuffer2.GetStr(), y, TempBuffer.GetStr(), TempBuffer.GetSize(), "@REALLYLONGTOKEN@", (size_t)-1, "long replacement string", (size_t)-1) == 1);
+	TempBuffer2.SetSize(y);
+	TEST_COMPARE(x, 1);
+
+	TEST_SUMMARY();
+
+	TEST_RETURN();
+}
+
 int Test_Sync_TLS(FILE *Testfp)
 {
 	TEST_START(Test_Sync_TLS);
@@ -728,6 +947,103 @@ int Test_Sync_TLS(FILE *Testfp)
 		TEST_COMPARE(x, 1);
 
 		GxSyncTLS.free(Data);
+
+		x = GxSyncTLS.ThreadEnd();
+		TEST_COMPARE(x, 1);
+	}
+
+	TEST_SUMMARY();
+
+	TEST_RETURN();
+}
+
+int Test_Sync_TLSMixedVar(FILE *Testfp)
+{
+	TEST_START(Test_Sync_TLSMixedVar);
+
+	bool x;
+
+	x = GxSyncTLS.ThreadInit();
+	TEST_COMPARE(x, 1);
+
+	if (x)
+	{
+		CubicleSoft::Sync::TLS::MixedVar TestMixedVar(&GxSyncTLS);
+
+		TestMixedVar.SetStr("");
+		TestMixedVar.SetStr("test");
+
+		x = TestMixedVar.IsStr();
+		TEST_COMPARE(x, 1);
+
+		x = (TestMixedVar.GetSize() == 4);
+		TEST_COMPARE(x, 1);
+
+		TestMixedVar.SetData("test\0test", 9);
+
+		x = (TestMixedVar.GetSize() == 9);
+		TEST_COMPARE(x, 1);
+
+		TestMixedVar.PrependStr("test");
+
+		x = (TestMixedVar.GetSize() == 13);
+		TEST_COMPARE(x, 1);
+
+		TestMixedVar.PrependData("test\0test", 9);
+
+		x = (TestMixedVar.GetSize() == 22);
+		TEST_COMPARE(x, 1);
+
+		TestMixedVar.AppendStr("test");
+
+		x = (TestMixedVar.GetSize() == 26);
+		TEST_COMPARE(x, 1);
+
+		TestMixedVar.AppendData("test\0test", 9);
+
+		x = (TestMixedVar.GetSize() == 35);
+		TEST_COMPARE(x, 1);
+
+		TestMixedVar.AppendChar('/');
+		TestMixedVar.AppendChar('/');
+		TestMixedVar.AppendChar('/');
+
+		x = (TestMixedVar.GetSize() == 38);
+		TEST_COMPARE(x, 1);
+
+		TestMixedVar.AppendMissingChar('/');
+		TestMixedVar.AppendMissingChar('a');
+
+		x = (TestMixedVar.GetSize() == 39);
+		TEST_COMPARE(x, 1);
+
+		TestMixedVar.RemoveTrailingChar('a');
+
+		while (TestMixedVar.RemoveTrailingChar('/'))  {}
+
+		x = (TestMixedVar.GetSize() == 35);
+		TEST_COMPARE(x, 1);
+
+		TestMixedVar.SetSize(1000);
+
+		x = (TestMixedVar.GetSize() == 1000);
+		TEST_COMPARE(x, 1);
+
+		TestMixedVar.SetSize(26);
+
+		x = (TestMixedVar.GetSize() == 26);
+		TEST_COMPARE(x, 1);
+
+		x = (memcmp(TestMixedVar.GetStr(), "test\0testtesttest\0testtest", 26) == 0);
+		TEST_COMPARE(x, 1);
+
+		x = (TestMixedVar.ReplaceStr("test", "123") == 6);
+		TEST_COMPARE(x, 1);
+
+		TestMixedVar.SetStr("This is a test.");
+
+		x = (TestMixedVar.ReplaceStr("test", "success") == 1);
+		TEST_COMPARE(x, 1);
 
 		x = GxSyncTLS.ThreadEnd();
 		TEST_COMPARE(x, 1);
@@ -777,37 +1093,37 @@ int Test_UTF8_AppInfo(FILE *Testfp, const char *Argv0)
 
 	y = sizeof(TempBuffer);
 	x = CubicleSoft::UTF8::AppInfo::GetExecutableFilename(TempBuffer, y, Argv0);
-	printf("\tCurrent executable filename:  %s\n", TempBuffer);
+	printf("\tCurrent executable filename:\n\t%s\n", TempBuffer);
 	TEST_COMPARE(x, 1);
 
 	y = sizeof(TempBuffer);
 	x = CubicleSoft::UTF8::AppInfo::GetExecutablePath(TempBuffer, y, Argv0);
-	printf("\tCurrent executable path:  %s\n", TempBuffer);
+	printf("\tCurrent executable path:\n\t%s\n", TempBuffer);
 	TEST_COMPARE(x, 1);
 
 	y = sizeof(TempBuffer);
 	x = CubicleSoft::UTF8::AppInfo::GetSystemAppStorageDir(TempBuffer, y);
-	printf("\tCurrent system application storage path:  %s\n", TempBuffer);
+	printf("\tCurrent system application storage path:\n\t%s\n", TempBuffer);
 	TEST_COMPARE(x, 1);
 
 	y = sizeof(TempBuffer);
 	x = CubicleSoft::UTF8::AppInfo::GetSystemAppStorageDir(TempBuffer, y, "test_suite");
-	printf("\tCurrent system application-specific storage path:  %s\n", TempBuffer);
+	printf("\tCurrent system application-specific storage path:\n\t%s\n", TempBuffer);
 	TEST_COMPARE(x, 1);
 
 	y = sizeof(TempBuffer);
 	x = CubicleSoft::UTF8::AppInfo::GetCurrentUserAppStorageDir(TempBuffer, y);
-	printf("\tCurrent user application storage path:  %s\n", TempBuffer);
+	printf("\tCurrent user application storage path:\n\t%s\n", TempBuffer);
 	TEST_COMPARE(x, 1);
 
 	y = sizeof(TempBuffer);
 	x = CubicleSoft::UTF8::AppInfo::GetCurrentUserAppStorageDir(TempBuffer, y, "test_suite");
-	printf("\tCurrent user application-specific storage path:  %s\n", TempBuffer);
+	printf("\tCurrent user application-specific storage path:\n\t%s\n", TempBuffer);
 	TEST_COMPARE(x, 1);
 
 	y = sizeof(TempBuffer);
 	x = CubicleSoft::UTF8::AppInfo::GetTempStorageDir(TempBuffer, y);
-	printf("\tCurrent temporary file storage path:  %s\n", TempBuffer);
+	printf("\tCurrent temporary file storage path:\n\t%s\n", TempBuffer);
 	TEST_COMPARE(x, 1);
 
 	TEST_SUMMARY();
@@ -959,7 +1275,11 @@ int main(int argc, char **argv)
 		Test_Templates_Queue(stdout);
 		Test_Templates_StaticVector(stdout);
 		Test_Templates_Static2DArray(stdout);
+		Test_Templates_StaticMixedVar(stdout);
+		Test_Templates_UTF8MixedVar(stdout);
+		Test_Templates_FastFindReplace(stdout);
 		Test_Sync_TLS(stdout);
+		Test_Sync_TLSMixedVar(stdout);
 		Test_Environment_AppInfo(stdout);
 		Test_UTF8_AppInfo(stdout, argv[0]);
 		Test_UTF8_File(stdout);
