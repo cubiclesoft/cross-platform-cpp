@@ -1,5 +1,5 @@
 // Cross-platform UTF-8, large file (> 2GB) and directory manipulation classes.
-// (C) 2013 CubicleSoft.  All Rights Reserved.
+// (C) 2016 CubicleSoft.  All Rights Reserved.
 
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -136,19 +136,24 @@ namespace CubicleSoft
 		{
 			if (MxFile == NULL)  return false;
 
+			std::uint64_t TempPos;
+
 			switch (whence)
 			{
-				case File::SeekStart:  MxCurrPos = (Pos <= MxMaxPos ? Pos : MxMaxPos);  break;
-				case File::SeekEnd:  MxCurrPos = (Pos <= MxMaxPos ? MxMaxPos - Pos : 0);  break;
-				case File::SeekForward:  MxCurrPos = (MxCurrPos + Pos <= MxMaxPos ? MxCurrPos + Pos : MxMaxPos);  break;
-				case File::SeekBackward:  MxCurrPos = (MxCurrPos >= Pos ? MxCurrPos - Pos : 0);  break;
+				case File::SeekStart:  TempPos = (Pos <= MxMaxPos ? Pos : MxMaxPos);  break;
+				case File::SeekEnd:  TempPos = (Pos <= MxMaxPos ? MxMaxPos - Pos : 0);  break;
+				case File::SeekForward:  TempPos = (MxCurrPos + Pos <= MxMaxPos ? MxCurrPos + Pos : MxMaxPos);  break;
+				case File::SeekBackward:  TempPos = (MxCurrPos >= Pos ? MxCurrPos - Pos : 0);  break;
+				default:  TempPos = MxCurrPos;  break;
 			}
 
 			LONG LowWord, HighWord;
-			LowWord = (LONG)(std::uint32_t)MxCurrPos;
-			HighWord = (LONG)(std::uint32_t)(MxCurrPos >> 32);
+			LowWord = (LONG)(std::uint32_t)TempPos;
+			HighWord = (LONG)(std::uint32_t)(TempPos >> 32);
 			DWORD Result = ::SetFilePointer(MxFile, LowWord, &HighWord, FILE_BEGIN);
 			if (Result == INVALID_SET_FILE_POINTER && ::GetLastError() != NO_ERROR)  return false;
+
+			MxCurrPos = TempPos;
 
 			return true;
 		}
@@ -1238,7 +1243,7 @@ namespace CubicleSoft
 			}
 			else  return false;
 
-			off_t Pos = ::lseek(MxFile, 0, SEEK_CUR);
+			off64_t Pos = ::lseek64(MxFile, 0, SEEK_CUR);
 			MxCurrPos = (Pos >= 0 ? (std::uint64_t)Pos : 0);
 			UpdateMaxPos();
 
@@ -1249,15 +1254,20 @@ namespace CubicleSoft
 		{
 			if (MxFile == -1)  return false;
 
+			std::uint64_t TempPos;
+
 			switch (whence)
 			{
-				case File::SeekStart:  MxCurrPos = (Pos <= MxMaxPos ? Pos : MxMaxPos);  break;
-				case File::SeekEnd:  MxCurrPos = (Pos <= MxMaxPos ? MxMaxPos - Pos : 0);  break;
-				case File::SeekForward:  MxCurrPos = (MxCurrPos + Pos <= MxMaxPos ? MxCurrPos + Pos : MxMaxPos);  break;
-				case File::SeekBackward:  MxCurrPos = (MxCurrPos >= Pos ? MxCurrPos - Pos : 0);  break;
+				case File::SeekStart:  TempPos = (Pos <= MxMaxPos ? Pos : MxMaxPos);  break;
+				case File::SeekEnd:  TempPos = (Pos <= MxMaxPos ? MxMaxPos - Pos : 0);  break;
+				case File::SeekForward:  TempPos = (MxCurrPos + Pos <= MxMaxPos ? MxCurrPos + Pos : MxMaxPos);  break;
+				case File::SeekBackward:  TempPos = (MxCurrPos >= Pos ? MxCurrPos - Pos : 0);  break;
+				default:  TempPos = MxCurrPos;  break;
 			}
 
-			if (::lseek(MxFile, (off_t)MxCurrPos, SEEK_CUR) < 0)  return false;
+			if (::lseek64(MxFile, (off64_t)TempPos, SEEK_SET) < 0)  return false;
+
+			MxCurrPos = TempPos;
 
 			return true;
 		}
@@ -1819,7 +1829,7 @@ namespace CubicleSoft
 			return GetPlatformFilename(Filename2, 8192, Filename);
 		}
 
-		char *File::LineInput(size_t SizeHint)
+		char *File::LineInput(size_t SizeHint, void *AltMallocManager, void *(*AltRealloc)(void *, void *, size_t))
 		{
 			char *Result, *Result2, *RPos, *NPos;
 			size_t x, CurrSize, ReadSize;
@@ -1830,15 +1840,20 @@ namespace CubicleSoft
 			CurrSize = SizeHint;
 			do
 			{
-				if (Result == NULL)  Result = new char[CurrSize + 1];
+				if (Result == NULL)  Result = (AltRealloc != NULL ? (char *)AltRealloc(AltMallocManager, NULL, CurrSize + 1) : new char[CurrSize + 1]);
 				else
 				{
 					// Enlarge storage space by SizeHint.
 					CurrSize += SizeHint;
-					Result2 = new char[CurrSize + 1];
-					memcpy(Result2, Result, CurrSize);
-					delete[] Result;
-					Result = Result2;
+
+					if (AltRealloc != NULL)  Result = (char *)AltRealloc(AltMallocManager, Result, CurrSize + 1);
+					else
+					{
+						Result2 = new char[CurrSize + 1];
+						memcpy(Result2, Result, CurrSize);
+						delete[] Result;
+						Result = Result2;
+					}
 				}
 
 				Read((std::uint8_t *)(Result + CurrSize - SizeHint), SizeHint, ReadSize);
@@ -1886,6 +1901,36 @@ namespace CubicleSoft
 			}
 
 			return Result;
+		}
+
+		bool File::LoadEntireFile(const char *Filename, char *&Result, size_t &BytesRead, void *AltMallocManager, void *(*AltMalloc)(void *, size_t), void (*AltFree)(void *, void *))
+		{
+			File TempFile;
+
+			Result = NULL;
+			BytesRead = 0;
+
+			if (!TempFile.Open(Filename, O_RDONLY))  return false;
+
+			char *TempResult;
+			size_t TempSize = (size_t)TempFile.GetMaxPos(), TempSize2;
+			if (AltMallocManager != NULL)  TempResult = (char *)AltMalloc(AltMallocManager, TempSize);
+			else  TempResult = new char[TempSize];
+
+			if (!TempFile.Read((std::uint8_t *)TempResult, TempSize, TempSize2) || TempSize != TempSize2)
+			{
+				if (AltMallocManager != NULL)  AltFree(AltMallocManager, TempResult);
+				else  delete[] TempResult;
+
+				return false;
+			}
+
+			TempFile.Close();
+
+			Result = TempResult;
+			BytesRead = TempSize;
+
+			return true;
 		}
 	}
 }

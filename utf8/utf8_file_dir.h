@@ -1,5 +1,5 @@
 // Cross-platform UTF-8, large file (> 2GB) and directory manipulation classes.
-// (C) 2013 CubicleSoft.  All Rights Reserved.
+// (C) 2016 CubicleSoft.  All Rights Reserved.
 
 #ifndef CUBICLESOFT_UTF8_FILE
 #define CUBICLESOFT_UTF8_FILE
@@ -118,10 +118,11 @@ namespace CubicleSoft
 			virtual bool Seek(SeekType whence, std::uint64_t Pos);
 			virtual bool Read(std::uint8_t *Data, size_t DataSize, size_t &DataRead);
 
-			// Result is not UTF-8 and not intended for binary data.  '\0' replaced with ' ' (space).
-			// Result will have been terminated by EOF or an ASCII newline '\r', '\n', '\r\n'.
+			// Result is not UTF-8 and also not intended for binary data.  '\0' replaced with ' ' (space).
+			// Result will have been terminated by EOF or an ASCII newline '\r', '\n', '\r\n' but trimmed.
 			// SizeHint helps optimize memory allocation performance.
-			virtual char *LineInput(size_t SizeHint = 1024);
+			// Check out Sync::TLS for a high-performance allocator.
+			virtual char *LineInput(size_t SizeHint = 1024, void *AltMallocManager = NULL, void *(*AltRealloc)(void *, void *, size_t) = NULL);
 
 			virtual bool Write(const char *Data, size_t &DataWritten);
 			virtual bool Write(const std::uint8_t *Data, size_t DataSize, size_t &DataWritten);
@@ -147,6 +148,10 @@ namespace CubicleSoft
 			static bool Stat(FileStat &Result, const char *Filename, bool Link = false);
 			static bool Symlink(const char *Src, const char *Dest);
 			static bool Readlink(char *Result, size_t ResultSize, const char *Filename);
+
+			// For quickly loading relatively small files.
+			// Check out Sync::TLS for a high-performance allocator.
+			static bool LoadEntireFile(const char *Filename, char *&Result, size_t &BytesRead, void *AltMallocManager = NULL, void *(*AltMalloc)(void *, size_t) = NULL, void (*AltFree)(void *, void *) = NULL);
 
 			// Timestamps are in Unix microsecond format.
 			static bool SetFileTimes(const char *Filename, std::uint64_t *Creation, std::uint64_t *LastAccess, std::uint64_t *LastUpdate);
