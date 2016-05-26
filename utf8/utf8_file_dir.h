@@ -28,6 +28,12 @@
 	#include <errno.h>
 	#include <utime.h>
 	#include <dirent.h>
+
+	#ifdef __APPLE__
+		#define lseek64 lseek
+		#define open64 open
+		#define off64_t off_t
+	#endif
 #endif
 
 #ifndef O_RDONLY
