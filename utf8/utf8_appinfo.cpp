@@ -122,13 +122,16 @@ namespace CubicleSoft
 
 			// Mac OSX.
 	#ifdef __APPLE__
-			if (z == -1)  z = proc_pidpath(getpid(), Buffer, z2);
+			if (z == -1)  z = proc_pidpath(getpid(), Buffer, (z2 > PROC_PIDPATHINFO_MAXSIZE ? PROC_PIDPATHINFO_MAXSIZE : z2));
+			if (z > -1)  z = strlen(Buffer);
 	#endif
 
+			if (z2)  Buffer[z2 - 1] = '\0';
+
 			char *Filename;
-			if (z > -1)
+			if (z > 0)
 			{
-				if ((size_t)z < z2)  Buffer[z++] = '\0';
+				if ((size_t)z < z2)  Buffer[z] = '\0';
 
 				Filename = realpath(Buffer, NULL);
 			}
