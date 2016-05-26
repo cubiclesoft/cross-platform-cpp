@@ -6,6 +6,7 @@
 #define CUBICLESOFT_FAST_FIND_REPLACE
 
 #include <cstddef>
+#include <cstring>
 #include <new>
 
 namespace CubicleSoft
