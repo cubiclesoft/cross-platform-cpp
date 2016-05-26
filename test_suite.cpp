@@ -19,6 +19,7 @@
 #include "sync/sync_mutex.h"
 #include "sync/sync_readwritelock.h"
 #include "sync/sync_semaphore.h"
+#include "sync/sync_sharedmem.h"
 #include "sync/sync_tls.h"
 #include "sync/sync_util.h"
 #include "templates/cache.h"
@@ -43,6 +44,7 @@ CubicleSoft::Sync::Event GxSyncEvent;
 CubicleSoft::Sync::Mutex GxSyncMutex;
 CubicleSoft::Sync::Semaphore GxSyncSemaphore;
 CubicleSoft::Sync::ReadWriteLock GxSyncReadWriteLock;
+CubicleSoft::Sync::SharedMem GxSyncSharedMem;
 CubicleSoft::Sync::TLS GxSyncTLS;
 CubicleSoft::Sync::TLS::MixedVar GxSyncTLSMixedVar;
 CubicleSoft::Cache<int, int> GxCache(11);
@@ -398,6 +400,7 @@ int Test_Sync_Semaphore(FILE *Testfp)
 		CubicleSoft::Sync::Semaphore::AutoUnlock TempLock(&TestSemaphore);
 	}
 
+	y = 0;
 	x = TestSemaphore.Unlock(&y);
 	TEST_COMPARE(x, 1);
 
@@ -436,7 +439,7 @@ int Test_Sync_ReadWriteLock(FILE *Testfp)
 		CubicleSoft::Sync::ReadWriteLock::AutoReadUnlock TempLock(&TestReadWrite);
 	}
 
-	// Don't rely on the behavior of returning false when read unlocks exceeding the number of read locks.
+	// Don't rely on the behavior of returning false when read unlocks exceed the number of read locks.
 	// Use AutoReadUnlock instead for every successful ReadLock().
 	x = TestReadWrite.ReadUnlock();
 	TEST_COMPARE(x, 0);
@@ -492,6 +495,43 @@ int Test_Sync_ReadWriteLock(FILE *Testfp)
 	{
 		CubicleSoft::Sync::ReadWriteLock::AutoWriteUnlock TempLock(&TestReadWrite);
 	}
+
+	TEST_SUMMARY();
+
+	TEST_RETURN();
+}
+
+int Test_Sync_SharedMem(FILE *Testfp)
+{
+	TEST_START(Test_Sync_SharedMem);
+
+	CubicleSoft::Sync::SharedMem TestSharedMem;
+	bool x;
+	int Result;
+
+	Result = TestSharedMem.Create("test_suite", 150, true, false);
+	x = (Result == 0);
+	TEST_COMPARE(x, 1);
+
+	if (!Result)  TestSharedMem.Ready();
+
+	x = (TestSharedMem.GetSize() == 150);
+	TEST_COMPARE(x, 1);
+
+	strcpy(TestSharedMem.RawData(), "test");
+
+	// Close all handles and then reconnect.  However, the data written should NOT be there since all references went away.
+	Result = TestSharedMem.Create("test_suite", 150, true, false);
+	x = (Result == 0);
+	TEST_COMPARE(x, 1);
+
+	if (!Result)  TestSharedMem.Ready();
+
+	x = (TestSharedMem.GetSize() == 150);
+	TEST_COMPARE(x, 1);
+
+	x = (memcmp(TestSharedMem.RawData(), "test", 5) != 0);
+	TEST_COMPARE(x, 1);
 
 	TEST_SUMMARY();
 
@@ -1069,9 +1109,10 @@ int Test_Environment_AppInfo(FILE *Testfp)
 	TEST_COMPARE(x, 1);
 
 	CurrThreadID = CubicleSoft::Environment::AppInfo::GetCurrentThreadID();
-	printf("\tCurrent thread ID:  %u\n", (unsigned int)CurrThreadID);
-	x = ((int)CurrThreadID != 0);
-	TEST_COMPARE(x, 1);
+// Attempting to cast the thread ID fails to compile on platforms where the return value of GetCurrentThreadID() is a pointer instead of an integer.
+//	printf("\tCurrent thread ID:  %u\n", (unsigned int)CurrThreadID);
+//	x = ((int)CurrThreadID != 0);
+//	TEST_COMPARE(x, 1);
 
 	CurrMicrosecond = CubicleSoft::Environment::AppInfo::GetUnixMicrosecondTime();
 	printf("\tCurrent UNIX microsecond:  %u\n", (unsigned int)CurrMicrosecond);
@@ -1269,6 +1310,7 @@ int main(int argc, char **argv)
 		Test_Sync_Mutex(stdout);
 		Test_Sync_Semaphore(stdout);
 		Test_Sync_ReadWriteLock(stdout);
+		Test_Sync_SharedMem(stdout);
 		Test_Templates_Cache(stdout);
 		Test_Templates_List(stdout);
 		Test_Templates_OrderedHash(stdout);
