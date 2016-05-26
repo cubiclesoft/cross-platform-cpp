@@ -1,5 +1,5 @@
 // Cross-platform, optionally named (cross-process), reader/writer lock.
-// (C) 2013 CubicleSoft.  All Rights Reserved.
+// (C) 2016 CubicleSoft.  All Rights Reserved.
 
 #ifndef CUBICLESOFT_SYNC_READWRITELOCK
 #define CUBICLESOFT_SYNC_READWRITELOCK
@@ -65,8 +65,12 @@ namespace CubicleSoft
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
 			HANDLE MxWinRSemMutex, MxWinRSemaphore, MxWinRWaitEvent, MxWinWWaitMutex;
 #else
-			sem_t *MxSemRSemMutex, *MxSemRSemaphore, *MxSemRWaitEvent, *MxSemWWaitMutex;
-			bool MxAllocated;
+			bool MxNamed;
+			char *MxMem;
+			Util::UnixSemaphoreWrapper MxPthreadRCountMutex;
+			volatile std::uint32_t *MxRCount;
+			Util::UnixEventWrapper MxPthreadRWaitEvent;
+			Util::UnixSemaphoreWrapper MxPthreadWWaitMutex;
 #endif
 		};
 	}

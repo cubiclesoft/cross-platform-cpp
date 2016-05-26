@@ -1,5 +1,5 @@
 // Cross-platform, optionally named (cross-process), reader/writer lock.
-// (C) 2014 CubicleSoft.  All Rights Reserved.
+// (C) 2016 CubicleSoft.  All Rights Reserved.
 
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -49,13 +49,13 @@ namespace CubicleSoft
 			else  Name2 = new char[strlen(Name) + 20];
 
 			// Create the mutexes, semaphore, and event objects.
-			if (Name2 != NULL)  sprintf(Name2, "Sync_ReadWrite|%s|0", Name);
+			if (Name2 != NULL)  sprintf(Name2, "%s-Sync_ReadWrite-0", Name);
 			MxWinRSemMutex = ::CreateSemaphoreA(&SecAttr, 1, 1, Name2);
-			if (Name2 != NULL)  sprintf(Name2, "Sync_ReadWrite|%s|1", Name);
+			if (Name2 != NULL)  sprintf(Name2, "%s-Sync_ReadWrite-1", Name);
 			MxWinRSemaphore = ::CreateSemaphoreA(&SecAttr, LONG_MAX, LONG_MAX, Name2);
-			if (Name2 != NULL)  sprintf(Name2, "Sync_ReadWrite|%s|2", Name);
+			if (Name2 != NULL)  sprintf(Name2, "%s-Sync_ReadWrite-2", Name);
 			MxWinRWaitEvent = ::CreateEventA(&SecAttr, TRUE, TRUE, Name2);
-			if (Name2 != NULL)  sprintf(Name2, "Sync_ReadWrite|%s|3", Name);
+			if (Name2 != NULL)  sprintf(Name2, "%s-Sync_ReadWrite-3", Name);
 			MxWinWWaitMutex = ::CreateSemaphoreA(&SecAttr, 1, 1, Name2);
 
 			if (Name2 != NULL)  delete[] Name2;
@@ -65,9 +65,9 @@ namespace CubicleSoft
 			return true;
 		}
 
-		bool ReadWriteLock::ReadLock(uint32_t Wait)
+		bool ReadWriteLock::ReadLock(std::uint32_t Wait)
 		{
-			uint64_t StartTime, CurrTime;
+			std::uint64_t StartTime, CurrTime;
 
 			if (MxWinRSemaphore == NULL || MxWinRSemMutex == NULL || MxWinRWaitEvent == NULL || MxWinWWaitMutex == NULL)  return false;
 
@@ -80,14 +80,7 @@ namespace CubicleSoft
 
 			// Acquire the semaphore mutex.
 			CurrTime = (Wait == INFINITE ? 0 : Util::GetUnixMicrosecondTime() / 1000000);
-			if (Wait < CurrTime - StartTime)
-			{
-				::ReleaseSemaphore(MxWinWWaitMutex, 1, NULL);
-
-				return false;
-			}
-			Result = ::WaitForSingleObject(MxWinRSemMutex, Wait - (DWORD)(CurrTime - StartTime));
-			if (Result != WAIT_OBJECT_0)
+			if (Wait < CurrTime - StartTime || ::WaitForSingleObject(MxWinRSemMutex, Wait - (DWORD)(CurrTime - StartTime)) != WAIT_OBJECT_0)
 			{
 				::ReleaseSemaphore(MxWinWWaitMutex, 1, NULL);
 
@@ -96,15 +89,7 @@ namespace CubicleSoft
 
 			// Acquire the semaphore.
 			CurrTime = (Wait == INFINITE ? 0 : Util::GetUnixMicrosecondTime() / 1000000);
-			if (Wait < CurrTime - StartTime)
-			{
-				::ReleaseSemaphore(MxWinRSemMutex, 1, NULL);
-				::ReleaseSemaphore(MxWinWWaitMutex, 1, NULL);
-
-				return false;
-			}
-			Result = ::WaitForSingleObject(MxWinRSemaphore, Wait - (DWORD)(CurrTime - StartTime));
-			if (Result != WAIT_OBJECT_0)
+			if (Wait < CurrTime - StartTime || ::WaitForSingleObject(MxWinRSemaphore, Wait - (DWORD)(CurrTime - StartTime)) != WAIT_OBJECT_0)
 			{
 				::ReleaseSemaphore(MxWinRSemMutex, 1, NULL);
 				::ReleaseSemaphore(MxWinWWaitMutex, 1, NULL);
@@ -129,9 +114,9 @@ namespace CubicleSoft
 			return true;
 		}
 
-		bool ReadWriteLock::WriteLock(uint32_t Wait)
+		bool ReadWriteLock::WriteLock(std::uint32_t Wait)
 		{
-			uint64_t StartTime, CurrTime;
+			std::uint64_t StartTime, CurrTime;
 
 			if (MxWinRWaitEvent == NULL || MxWinWWaitMutex == NULL)  return false;
 
@@ -144,8 +129,7 @@ namespace CubicleSoft
 
 			// Wait for readers to reach zero.
 			CurrTime = (Wait == INFINITE ? 0 : Util::GetUnixMicrosecondTime() / 1000000);
-			Result = ::WaitForSingleObject(MxWinRWaitEvent, Wait - (DWORD)(CurrTime - StartTime));
-			if (Result != WAIT_OBJECT_0)
+			if (Wait < CurrTime - StartTime || ::WaitForSingleObject(MxWinRWaitEvent, Wait - (DWORD)(CurrTime - StartTime)) != WAIT_OBJECT_0)
 			{
 				::ReleaseSemaphore(MxWinWWaitMutex, 1, NULL);
 
@@ -200,227 +184,178 @@ namespace CubicleSoft
 		}
 #else
 		// POSIX pthreads.
-		ReadWriteLock::ReadWriteLock() : MxSemRSemMutex(SEM_FAILED), MxSemRSemaphore(SEM_FAILED), MxSemRWaitEvent(SEM_FAILED), MxSemWWaitMutex(SEM_FAILED), MxAllocated(false)
+		ReadWriteLock::ReadWriteLock() : MxNamed(false), MxMem(NULL), MxRCount(NULL)
 		{
 		}
 
 		ReadWriteLock::~ReadWriteLock()
 		{
-			if (MxAllocated)
+			if (MxMem != NULL)
 			{
-				if (MxSemWWaitMutex != SEM_FAILED)  delete MxSemWWaitMutex;
-				if (MxSemRWaitEvent != SEM_FAILED)  delete MxSemRWaitEvent;
-				if (MxSemRSemaphore != SEM_FAILED)  delete MxSemRSemaphore;
-				if (MxSemRSemMutex != SEM_FAILED)  delete MxSemRSemMutex;
-			}
-			else
-			{
-				if (MxSemWWaitMutex != SEM_FAILED)  sem_close(MxSemWWaitMutex);
-				if (MxSemRWaitEvent != SEM_FAILED)  sem_close(MxSemRWaitEvent);
-				if (MxSemRSemaphore != SEM_FAILED)  sem_close(MxSemRSemaphore);
-				if (MxSemRSemMutex != SEM_FAILED)  sem_close(MxSemRSemMutex);
+				if (MxNamed)  Util::UnmapUnixNamedMem(MxMem, Util::GetUnixSemaphoreSize() + Util::AlignUnixSize(sizeof(std::uint32_t)) + Util::GetUnixEventSize() + Util::GetUnixSemaphoreSize());
+				else
+				{
+					Util::FreeUnixSemaphore(MxPthreadRCountMutex);
+					Util::FreeUnixEvent(MxPthreadRWaitEvent);
+					Util::FreeUnixSemaphore(MxPthreadWWaitMutex);
+
+					delete[] MxMem;
+				}
 			}
 		}
 
 		bool ReadWriteLock::Create(const char *Name)
 		{
-			if (MxAllocated)
+			if (MxMem != NULL)
 			{
-				if (MxSemWWaitMutex != SEM_FAILED)  delete MxSemWWaitMutex;
-				if (MxSemRWaitEvent != SEM_FAILED)  delete MxSemRWaitEvent;
-				if (MxSemRSemaphore != SEM_FAILED)  delete MxSemRSemaphore;
-				if (MxSemRSemMutex != SEM_FAILED)  delete MxSemRSemMutex;
-			}
-			else
-			{
-				if (MxSemWWaitMutex != SEM_FAILED)  sem_close(MxSemWWaitMutex);
-				if (MxSemRWaitEvent != SEM_FAILED)  sem_close(MxSemRWaitEvent);
-				if (MxSemRSemaphore != SEM_FAILED)  sem_close(MxSemRSemaphore);
-				if (MxSemRSemMutex != SEM_FAILED)  sem_close(MxSemRSemMutex);
+				if (MxNamed)  Util::UnmapUnixNamedMem(MxMem, Util::GetUnixSemaphoreSize() + Util::AlignUnixSize(sizeof(std::uint32_t)) + Util::GetUnixEventSize() + Util::GetUnixSemaphoreSize());
+				else
+				{
+					Util::FreeUnixSemaphore(MxPthreadRCountMutex);
+					Util::FreeUnixEvent(MxPthreadRWaitEvent);
+					Util::FreeUnixSemaphore(MxPthreadWWaitMutex);
+
+					delete[] MxMem;
+				}
 			}
 
-			MxSemWWaitMutex = SEM_FAILED;
-			MxSemRWaitEvent = SEM_FAILED;
-			MxSemRSemaphore = SEM_FAILED;
-			MxSemRSemMutex = SEM_FAILED;
+			MxMem = NULL;
+			MxRCount = NULL;
 
-			if (Name != NULL)
+			size_t Pos, TempSize = Util::GetUnixSemaphoreSize() + Util::AlignUnixSize(sizeof(std::uint32_t)) + Util::GetUnixEventSize() + Util::GetUnixSemaphoreSize();
+			MxNamed = (Name != NULL);
+			int Result = Util::InitUnixNamedMem(MxMem, Pos, "/Sync_ReadWrite", Name, TempSize);
+
+			if (Result < 0)  return false;
+
+			// Load the pointers.
+			char *MemPtr = MxMem + Pos;
+			Util::GetUnixSemaphore(MxPthreadRCountMutex, MemPtr);
+			MemPtr += Util::GetUnixSemaphoreSize();
+
+			MxRCount = reinterpret_cast<volatile std::uint32_t *>(MemPtr);
+			MemPtr += Util::AlignUnixSize(sizeof(std::uint32_t));
+
+			Util::GetUnixEvent(MxPthreadRWaitEvent, MemPtr);
+			MemPtr += Util::GetUnixEventSize();
+
+			Util::GetUnixSemaphore(MxPthreadWWaitMutex, MemPtr);
+
+			// Handle the first time this reader/writer lock has been opened.
+			if (Result == 0)
 			{
-				char *Name2 = new char[strlen(Name) + 20];
+				Util::InitUnixSemaphore(MxPthreadRCountMutex, MxNamed, 1, 1);
+				MxRCount[0] = 0;
+				Util::InitUnixEvent(MxPthreadRWaitEvent, MxNamed, true);
+				Util::FireUnixEvent(MxPthreadRWaitEvent);
+				Util::InitUnixSemaphore(MxPthreadWWaitMutex, MxNamed, 1, 1);
 
-				MxAllocated = false;
-
-				sprintf(Name2, "/Sync_ReadWrite_%s_0", Name);
-				MxSemRSemMutex = sem_open(Name2, O_CREAT, 0666, 1);
-				sprintf(Name2, "/Sync_ReadWrite_%s_1", Name);
-				MxSemRSemaphore = sem_open(Name2, O_CREAT, 0666, SEM_VALUE_MAX);
-				sprintf(Name2, "/Sync_ReadWrite_%s_2", Name);
-				MxSemRWaitEvent = sem_open(Name2, O_CREAT, 0666, 1);
-				sprintf(Name2, "/Sync_ReadWrite_%s_3", Name);
-				MxSemWWaitMutex = sem_open(Name2, O_CREAT, 0666, 1);
-
-				delete[] Name2;
+				if (MxNamed)  Util::UnixNamedMemReady(MxMem);
 			}
-			else
-			{
-				MxAllocated = true;
-
-				MxSemRSemMutex = new sem_t;
-				memset(MxSemRSemMutex, 0, sizeof(sem_t));
-				sem_init(MxSemRSemMutex, 0, 1);
-
-				MxSemRSemaphore = new sem_t;
-				memset(MxSemRSemaphore, 0, sizeof(sem_t));
-				sem_init(MxSemRSemaphore, 0, SEM_VALUE_MAX);
-
-				MxSemRWaitEvent = new sem_t;
-				memset(MxSemRWaitEvent, 0, sizeof(sem_t));
-				sem_init(MxSemRWaitEvent, 0, 1);
-
-				MxSemWWaitMutex = new sem_t;
-				memset(MxSemWWaitMutex, 0, sizeof(sem_t));
-				sem_init(MxSemWWaitMutex, 0, 1);
-			}
-
-			if (MxSemRSemMutex == SEM_FAILED || MxSemRSemaphore == SEM_FAILED || MxSemRWaitEvent == SEM_FAILED || MxSemWWaitMutex == SEM_FAILED)  return false;
 
 			return true;
 		}
 
-		bool ReadWriteLock::ReadLock(uint32_t Wait)
+		bool ReadWriteLock::ReadLock(std::uint32_t Wait)
 		{
-			uint64_t StartTime, CurrTime;
+			std::uint64_t StartTime, CurrTime;
 
-			if (MxSemRSemMutex == SEM_FAILED || MxSemRSemaphore == SEM_FAILED || MxSemRWaitEvent == SEM_FAILED || MxSemWWaitMutex == SEM_FAILED)  return false;
+			if (MxMem == NULL)  return false;
 
 			// Get current time in milliseconds.
 			StartTime = (Wait == INFINITE ? 0 : Util::GetUnixMicrosecondTime() / 1000000);
 
 			// Acquire the write lock mutex.  Guarantees that readers can't starve the writer.
-			if (!Util::WaitForSemaphore(MxSemWWaitMutex, Wait))  return false;
+			if (!Util::WaitForUnixSemaphore(MxPthreadWWaitMutex, Wait))  return false;
 
-			// Acquire the semaphore mutex.
+			// Acquire the counter mutex.
 			CurrTime = (Wait == INFINITE ? 0 : Util::GetUnixMicrosecondTime() / 1000000);
-			if (Wait < CurrTime - StartTime)
+			if (Wait < CurrTime - StartTime || !Util::WaitForUnixSemaphore(MxPthreadRCountMutex, Wait - (CurrTime - StartTime)))
 			{
-				sem_post(MxSemWWaitMutex);
-
-				return false;
-			}
-			if (!Util::WaitForSemaphore(MxSemRSemMutex, Wait - (CurrTime - StartTime)))
-			{
-				sem_post(MxSemWWaitMutex);
-
-				return false;
-			}
-
-			// Acquire the semaphore.
-			CurrTime = (Wait == INFINITE ? 0 : Util::GetUnixMicrosecondTime() / 1000000);
-			if (Wait < CurrTime - StartTime)
-			{
-				sem_post(MxSemRSemMutex);
-				sem_post(MxSemWWaitMutex);
-
-				return false;
-			}
-			if (!Util::WaitForSemaphore(MxSemRSemaphore, Wait - (CurrTime - StartTime)))
-			{
-				sem_post(MxSemRSemMutex);
-				sem_post(MxSemWWaitMutex);
+				Util::ReleaseUnixSemaphore(MxPthreadWWaitMutex, NULL);
 
 				return false;
 			}
 
 			// Update the event state.
-			int Val;
-			sem_getvalue(MxSemRSemaphore, &Val);
-			if (Val == SEM_VALUE_MAX - 1)
+			if (!Util::ResetUnixEvent(MxPthreadRWaitEvent))
 			{
-				if (!Util::WaitForSemaphore(MxSemRWaitEvent, INFINITE))
-				{
-					sem_post(MxSemRSemaphore);
-					sem_post(MxSemRSemMutex);
-					sem_post(MxSemWWaitMutex);
+				Util::ReleaseUnixSemaphore(MxPthreadRCountMutex, NULL);
+				Util::ReleaseUnixSemaphore(MxPthreadWWaitMutex, NULL);
 
-					return false;
-				}
+				return false;
 			}
 
+			// Increment the number of readers.
+			MxRCount[0]++;
+
 			// Release the mutexes.
-			sem_post(MxSemRSemMutex);
-			sem_post(MxSemWWaitMutex);
+			Util::ReleaseUnixSemaphore(MxPthreadRCountMutex, NULL);
+			Util::ReleaseUnixSemaphore(MxPthreadWWaitMutex, NULL);
 
 			return true;
 		}
 
-		bool ReadWriteLock::WriteLock(uint32_t Wait)
+		bool ReadWriteLock::WriteLock(std::uint32_t Wait)
 		{
-			uint64_t StartTime, CurrTime;
+			std::uint64_t StartTime, CurrTime;
 
-			if (MxSemRWaitEvent == NULL || MxSemWWaitMutex == NULL)  return false;
+			if (MxMem == NULL)  return false;
 
 			// Get current time in milliseconds.
 			StartTime = (Wait == INFINITE ? 0 : Util::GetUnixMicrosecondTime() / 1000000);
 
 			// Acquire the write lock mutex.
-			if (!Util::WaitForSemaphore(MxSemWWaitMutex, Wait))  return false;
+			if (!Util::WaitForUnixSemaphore(MxPthreadWWaitMutex, Wait))  return false;
 
 			// Wait for readers to reach zero.
 			CurrTime = (Wait == INFINITE ? 0 : Util::GetUnixMicrosecondTime() / 1000000);
-			if (!Util::WaitForSemaphore(MxSemRWaitEvent, Wait - (CurrTime - StartTime)))
+			if (Wait < CurrTime - StartTime || !Util::WaitForUnixEvent(MxPthreadRWaitEvent, Wait - (CurrTime - StartTime)))
 			{
-				sem_post(MxSemWWaitMutex);
+				Util::ReleaseUnixSemaphore(MxPthreadWWaitMutex, NULL);
 
 				return false;
 			}
-
-			// Release the semaphore to avoid a later deadlock.
-			sem_post(MxSemRWaitEvent);
 
 			return true;
 		}
 
 		bool ReadWriteLock::ReadUnlock()
 		{
-			if (MxSemRSemMutex == NULL || MxSemRSemaphore == NULL || MxSemRWaitEvent == NULL)  return false;
+			if (MxMem == NULL)  return false;
 
-			// Acquire the semaphore mutex.
-			if (!Util::WaitForSemaphore(MxSemRSemMutex, INFINITE))  return false;
+			// Acquire the counter mutex.
+			if (!Util::WaitForUnixSemaphore(MxPthreadRCountMutex, INFINITE))  return false;
 
-			// Release the semaphore.
-			int Result = sem_post(MxSemRSemaphore);
-			if (Result != 0)
+			// Decrease the number of readers.
+			if (MxRCount[0])  MxRCount[0]--;
+			else
 			{
-				sem_post(MxSemRSemMutex);
+				Util::ReleaseUnixSemaphore(MxPthreadRCountMutex, NULL);
 
 				return false;
 			}
 
 			// Update the event state.
-			int Val;
-			sem_getvalue(MxSemRSemaphore, &Val);
-			if (Val == SEM_VALUE_MAX)
+			if (!MxRCount[0] && !Util::FireUnixEvent(MxPthreadRWaitEvent))
 			{
-				if (sem_post(MxSemRWaitEvent) != 0)
-				{
-					sem_post(MxSemRSemMutex);
+				Util::ReleaseUnixSemaphore(MxPthreadRCountMutex, NULL);
 
-					return false;
-				}
+				return false;
 			}
 
-			// Release the semaphore mutex.
-			sem_post(MxSemRSemMutex);
+			// Release the counter mutex.
+			Util::ReleaseUnixSemaphore(MxPthreadRCountMutex, NULL);
 
-			return (Result == 0);
+			return true;
 		}
 
 		bool ReadWriteLock::WriteUnlock()
 		{
-			if (MxSemWWaitMutex == NULL)  return false;
+			if (MxMem == NULL)  return false;
 
 			// Release the write lock.
-			sem_post(MxSemWWaitMutex);
+			Util::ReleaseUnixSemaphore(MxPthreadWWaitMutex, NULL);
 
 			return true;
 		}

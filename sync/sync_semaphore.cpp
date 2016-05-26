@@ -1,10 +1,5 @@
 // Cross-platform, optionally named (cross-process), semaphore.
-// (C) 2013 CubicleSoft.  All Rights Reserved.
-
-#define _CRT_SECURE_NO_WARNINGS
-
-#include <cstdio>
-#include <cstring>
+// (C) 2016 CubicleSoft.  All Rights Reserved.
 
 #include "sync_semaphore.h"
 
@@ -64,73 +59,73 @@ namespace CubicleSoft
 		}
 #else
 		// POSIX pthreads.
-		Semaphore::Semaphore() : MxSemSemaphore(SEM_FAILED)
+		Semaphore::Semaphore() : MxNamed(false), MxMem(NULL)
 		{
 		}
 
 		Semaphore::~Semaphore()
 		{
-			if (MxSemSemaphore != SEM_FAILED)
+			if (MxMem != NULL)
 			{
-				if (MxAllocated)  delete MxSemSemaphore;
-				else  sem_close(MxSemSemaphore);
+				if (MxNamed)  Util::UnmapUnixNamedMem(MxMem, Util::GetUnixSemaphoreSize());
+				else
+				{
+					Util::FreeUnixSemaphore(MxPthreadSemaphore);
+
+					delete[] MxMem;
+				}
 			}
 		}
 
 		bool Semaphore::Create(const char *Name, int InitialVal)
 		{
-			if (MxSemSemaphore != SEM_FAILED)
+			if (MxMem != NULL)
 			{
-				if (MxAllocated)  delete MxSemSemaphore;
-				else  sem_close(MxSemSemaphore);
+				if (MxNamed)  Util::UnmapUnixNamedMem(MxMem, Util::GetUnixSemaphoreSize());
+				else
+				{
+					Util::FreeUnixSemaphore(MxPthreadSemaphore);
+
+					delete[] MxMem;
+				}
 			}
 
-			MxSemSemaphore = SEM_FAILED;
+			MxMem = NULL;
 
-			if (Name != NULL)
+			size_t Pos, TempSize = Util::GetUnixSemaphoreSize();
+			MxNamed = (Name != NULL);
+			int Result = Util::InitUnixNamedMem(MxMem, Pos, "/Sync_Semaphore", Name, TempSize);
+
+			if (Result < 0)  return false;
+
+			Util::GetUnixSemaphore(MxPthreadSemaphore, MxMem + Pos);
+
+			// Handle the first time this semaphore has been opened.
+			if (Result == 0)
 			{
-				char *Name2 = new char[strlen(Name) + 20];
+				Util::InitUnixSemaphore(MxPthreadSemaphore, MxNamed, InitialVal, InitialVal);
 
-				MxAllocated = false;
-
-				sprintf(Name2, "/Sync_Semaphore_%s_0", Name);
-				MxSemSemaphore = sem_open(Name2, O_CREAT, 0666, (unsigned int)InitialVal);
-
-				delete[] Name2;
+				if (MxNamed)  Util::UnixNamedMemReady(MxMem);
 			}
-			else
-			{
-				MxAllocated = true;
-
-				MxSemSemaphore = new sem_t;
-				memset(MxSemSemaphore, 0, sizeof(sem_t));
-				sem_init(MxSemSemaphore, 0, (unsigned int)InitialVal);
-			}
-
-			if (MxSemSemaphore == SEM_FAILED)  return false;
 
 			return true;
 		}
 
 		bool Semaphore::Lock(std::uint32_t Wait)
 		{
-			if (MxSemSemaphore == SEM_FAILED)  return false;
+			if (MxMem == NULL)  return false;
 
 			// Wait for the semaphore.
-			return Util::WaitForSemaphore(MxSemSemaphore, Wait);
+			return Util::WaitForUnixSemaphore(MxPthreadSemaphore, Wait);
 		}
 
 		bool Semaphore::Unlock(int *PrevCount)
 		{
-			if (MxSemSemaphore == SEM_FAILED)  return false;
+			if (MxMem == NULL)  return false;
 
-			// Get the current value first.
-			int Val;
-			sem_getvalue(MxSemSemaphore, &Val);
-			if (PrevCount != NULL)  *PrevCount = Val;
-
-			// Release the semaphore.
-			sem_post(MxSemSemaphore);
+			std::uint32_t Count;
+			Util::ReleaseUnixSemaphore(MxPthreadSemaphore, &Count);
+			if (PrevCount != NULL)  *PrevCount = (int)Count;
 
 			return true;
 		}

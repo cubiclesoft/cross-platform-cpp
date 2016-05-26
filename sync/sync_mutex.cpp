@@ -1,10 +1,5 @@
 // Cross-platform, optionally named (cross-process), self-counting (recursive) mutex.
-// (C) 2013 CubicleSoft.  All Rights Reserved.
-
-#define _CRT_SECURE_NO_WARNINGS
-
-#include <cstdio>
-#include <cstring>
+// (C) 2016 CubicleSoft.  All Rights Reserved.
 
 #include "sync_mutex.h"
 
@@ -134,7 +129,7 @@ namespace CubicleSoft
 		}
 #else
 		// POSIX pthreads.
-		Mutex::Mutex() : MxSemMutex(SEM_FAILED), MxAllocated(false), MxOwnerID(0), MxCount(0)
+		Mutex::Mutex() : MxNamed(false), MxMem(NULL), MxOwnerID(0), MxCount(0)
 		{
 			pthread_mutex_init(&MxPthreadCritSection, NULL);
 		}
@@ -143,10 +138,15 @@ namespace CubicleSoft
 		{
 			Unlock(true);
 
-			if (MxSemMutex != SEM_FAILED)
+			if (MxMem != NULL)
 			{
-				if (MxAllocated)  delete MxSemMutex;
-				else  sem_close(MxSemMutex);
+				if (MxNamed)  Util::UnmapUnixNamedMem(MxMem, Util::GetUnixSemaphoreSize());
+				else
+				{
+					Util::FreeUnixSemaphore(MxPthreadMutex);
+
+					delete[] MxMem;
+				}
 			}
 
 			pthread_mutex_destroy(&MxPthreadCritSection);
@@ -160,12 +160,16 @@ namespace CubicleSoft
 			{
 				if (MxOwnerID == Util::GetCurrentThreadID())
 				{
-					sem_post(MxSemMutex);
-					if (MxAllocated)  delete MxSemMutex;
-					else  sem_close(MxSemMutex);
+					if (MxNamed)  Util::UnmapUnixNamedMem(MxMem, Util::GetUnixSemaphoreSize());
+					else
+					{
+						Util::FreeUnixSemaphore(MxPthreadMutex);
 
-					MxSemMutex = SEM_FAILED;
-					MxAllocated = false;
+						delete[] MxMem;
+					}
+
+					MxNamed = false;
+					MxMem = NULL;
 					MxCount = 0;
 					MxOwnerID = 0;
 				}
@@ -177,29 +181,28 @@ namespace CubicleSoft
 				}
 			}
 
-			if (Name != NULL)
+			size_t Pos, TempSize = Util::GetUnixSemaphoreSize();
+			MxNamed = (Name != NULL);
+			int Result = Util::InitUnixNamedMem(MxMem, Pos, "/Sync_Mutex", Name, TempSize);
+
+			if (Result < 0)
 			{
-				char *Name2 = new char[strlen(Name) + 20];
+				pthread_mutex_unlock(&MxPthreadCritSection);
 
-				MxAllocated = false;
-
-				sprintf(Name2, "/Sync_Mutex_%s_0", Name);
-				MxSemMutex = sem_open(Name2, O_CREAT, 0666, 1);
-
-				delete[] Name2;
+				return false;
 			}
-			else
-			{
-				MxAllocated = true;
 
-				MxSemMutex = new sem_t;
-				memset(MxSemMutex, 0, sizeof(sem_t));
-				sem_init(MxSemMutex, 0, 1);
+			Util::GetUnixSemaphore(MxPthreadMutex, MxMem + Pos);
+
+			// Handle the first time this mutex has been opened.
+			if (Result == 0)
+			{
+				Util::InitUnixSemaphore(MxPthreadMutex, MxNamed, 1, 1);
+
+				if (MxNamed)  Util::UnixNamedMemReady(MxMem);
 			}
 
 			pthread_mutex_unlock(&MxPthreadCritSection);
-
-			if (MxSemMutex == SEM_FAILED)  return false;
 
 			return true;
 		}
@@ -219,7 +222,7 @@ namespace CubicleSoft
 
 			pthread_mutex_unlock(&MxPthreadCritSection);
 
-			if (!Util::WaitForSemaphore(MxSemMutex, Wait))  return false;
+			if (!Util::WaitForUnixSemaphore(MxPthreadMutex, Wait))  return false;
 
 			pthread_mutex_lock(&MxPthreadCritSection);
 			MxOwnerID = Util::GetCurrentThreadID();
@@ -248,7 +251,7 @@ namespace CubicleSoft
 				MxOwnerID = 0;
 
 				// Release the mutex.
-				sem_post(MxSemMutex);
+				Util::ReleaseUnixSemaphore(MxPthreadMutex, NULL);
 			}
 
 			pthread_mutex_unlock(&MxPthreadCritSection);

@@ -1,10 +1,5 @@
 // Cross-platform, optionally named (cross-process), event object (e.g. for producer/consumer queues).
-// (C) 2013 CubicleSoft.  All Rights Reserved.
-
-#define _CRT_SECURE_NO_WARNINGS
-
-#include <cstdio>
-#include <cstring>
+// (C) 2016 CubicleSoft.  All Rights Reserved.
 
 #include "sync_event.h"
 
@@ -42,7 +37,7 @@ namespace CubicleSoft
 			return true;
 		}
 
-		bool Event::Wait(uint32_t Wait)
+		bool Event::Wait(std::uint32_t Wait)
 		{
 			if (MxWinWaitEvent == NULL)  return false;
 
@@ -71,211 +66,78 @@ namespace CubicleSoft
 		}
 #else
 		// POSIX pthreads.
-		Event::Event() : MxSemWaitMutex(SEM_FAILED), MxSemWaitEvent(SEM_FAILED), MxSemWaitCount(SEM_FAILED), MxSemWaitStatus(SEM_FAILED), MxAllocated(false), MxManual(false)
+		Event::Event() : MxNamed(false), MxMem(NULL)
 		{
 		}
 
 		Event::~Event()
 		{
-			if (MxAllocated)
+			if (MxMem != NULL)
 			{
-				if (MxSemWaitStatus != SEM_FAILED)  delete MxSemWaitStatus;
-				if (MxSemWaitCount != SEM_FAILED)  delete MxSemWaitCount;
-				if (MxSemWaitEvent != SEM_FAILED)  delete MxSemWaitEvent;
-				if (MxSemWaitMutex != SEM_FAILED)  delete MxSemWaitMutex;
-			}
-			else
-			{
-				if (MxSemWaitStatus != SEM_FAILED)  sem_close(MxSemWaitStatus);
-				if (MxSemWaitCount != SEM_FAILED)  sem_close(MxSemWaitCount);
-				if (MxSemWaitEvent != SEM_FAILED)  sem_close(MxSemWaitEvent);
-				if (MxSemWaitMutex != SEM_FAILED)  sem_close(MxSemWaitMutex);
+				if (MxNamed)  Util::UnmapUnixNamedMem(MxMem, Util::GetUnixEventSize());
+				else
+				{
+					Util::FreeUnixEvent(MxPthreadEvent);
+
+					delete[] MxMem;
+				}
 			}
 		}
 
 		bool Event::Create(const char *Name, bool Manual)
 		{
-			if (MxAllocated)
+			if (MxMem != NULL)
 			{
-				if (MxSemWaitStatus != SEM_FAILED)  delete MxSemWaitStatus;
-				if (MxSemWaitCount != SEM_FAILED)  delete MxSemWaitCount;
-				if (MxSemWaitEvent != SEM_FAILED)  delete MxSemWaitEvent;
-				if (MxSemWaitMutex != SEM_FAILED)  delete MxSemWaitMutex;
-			}
-			else
-			{
-				if (MxSemWaitStatus != SEM_FAILED)  sem_close(MxSemWaitStatus);
-				if (MxSemWaitCount != SEM_FAILED)  sem_close(MxSemWaitCount);
-				if (MxSemWaitEvent != SEM_FAILED)  sem_close(MxSemWaitEvent);
-				if (MxSemWaitMutex != SEM_FAILED)  sem_close(MxSemWaitMutex);
-			}
-
-			MxSemWaitStatus = SEM_FAILED;
-			MxSemWaitCount = SEM_FAILED;
-			MxSemWaitEvent = SEM_FAILED;
-			MxSemWaitMutex = SEM_FAILED;
-			MxManual = Manual;
-
-			if (Name != NULL)
-			{
-				char *Name2 = new char[strlen(Name) + 20];
-
-				MxAllocated = false;
-
-				sprintf(Name2, "/Sync_Event_%s_0", Name);
-				MxSemWaitMutex = sem_open(Name2, O_CREAT, 0666, 1);
-				sprintf(Name2, "/Sync_Event_%s_1", Name);
-				MxSemWaitEvent = sem_open(Name2, O_CREAT, 0666, 0);
-
-				if (MxManual)
+				if (MxNamed)  Util::UnmapUnixNamedMem(MxMem, Util::GetUnixEventSize());
+				else
 				{
-					sprintf(Name2, "/Sync_Event_%s_2", Name);
-					MxSemWaitCount = sem_open(Name2, O_CREAT, 0666, 0);
+					Util::FreeUnixEvent(MxPthreadEvent);
 
-					sprintf(Name2, "/Sync_Event_%s_3", Name);
-					MxSemWaitStatus = sem_open(Name2, O_CREAT, 0666, 0);
-				}
-
-				delete[] Name2;
-			}
-			else
-			{
-				MxAllocated = true;
-
-				MxSemWaitMutex = new sem_t;
-				memset(MxSemWaitMutex, 0, sizeof(sem_t));
-				sem_init(MxSemWaitMutex, 0, 1);
-
-				MxSemWaitEvent = new sem_t;
-				memset(MxSemWaitEvent, 0, sizeof(sem_t));
-				sem_init(MxSemWaitEvent, 0, 0);
-
-				if (MxManual)
-				{
-					MxSemWaitCount = new sem_t;
-					memset(MxSemWaitCount, 0, sizeof(sem_t));
-					sem_init(MxSemWaitCount, 0, 0);
-
-					MxSemWaitStatus = new sem_t;
-					memset(MxSemWaitStatus, 0, sizeof(sem_t));
-					sem_init(MxSemWaitStatus, 0, 0);
+					delete[] MxMem;
 				}
 			}
 
-			if (MxSemWaitMutex == SEM_FAILED || MxSemWaitEvent == SEM_FAILED || (MxManual && (MxSemWaitCount == SEM_FAILED || MxSemWaitStatus == SEM_FAILED)))  return false;
+			MxMem = NULL;
+
+			size_t Pos, TempSize = Util::GetUnixEventSize();
+			MxNamed = (Name != NULL);
+			int Result = Util::InitUnixNamedMem(MxMem, Pos, "/Sync_Event", Name, TempSize);
+
+			if (Result < 0)  return false;
+
+			Util::GetUnixEvent(MxPthreadEvent, MxMem + Pos);
+
+			// Handle the first time this event has been opened.
+			if (Result == 0)
+			{
+				Util::InitUnixEvent(MxPthreadEvent, MxNamed, Manual);
+
+				if (MxNamed)  Util::UnixNamedMemReady(MxMem);
+			}
 
 			return true;
 		}
 
-		bool Event::Wait(uint32_t WaitAmt)
+		bool Event::Wait(std::uint32_t WaitAmt)
 		{
-			uint64_t StartTime, CurrTime;
+			if (MxMem == NULL)  return false;
 
-			if (MxSemWaitMutex == SEM_FAILED || MxSemWaitEvent == SEM_FAILED || (MxManual && (MxSemWaitCount == SEM_FAILED || MxSemWaitStatus == SEM_FAILED)))  return false;
-
-			// Get current time in milliseconds.
-			StartTime = (WaitAmt == INFINITE ? 0 : Util::GetUnixMicrosecondTime() / 1000000);
-
-			if (!MxManual)  CurrTime = StartTime;
-			else
-			{
-				// Lock the mutex.
-				if (!Util::WaitForSemaphore(MxSemWaitMutex, WaitAmt))  return false;
-
-				// Get the status.  If it is 1, then the event has been fired.
-				int Val;
-				sem_getvalue(MxSemWaitStatus, &Val);
-				if (Val == 1)
-				{
-					sem_post(MxSemWaitMutex);
-
-					return true;
-				}
-
-				// Increment the wait count.
-				CurrTime = (WaitAmt == INFINITE ? 0 : Util::GetUnixMicrosecondTime() / 1000000);
-				if (WaitAmt < CurrTime - StartTime)
-				{
-					sem_post(MxSemWaitMutex);
-
-					return false;
-				}
-				sem_post(MxSemWaitCount);
-
-				// Release the mutex.
-				sem_post(MxSemWaitMutex);
-			}
-
-			// Wait for the semaphore.
-			bool Result = Util::WaitForSemaphore(MxSemWaitEvent, WaitAmt - (CurrTime - StartTime));
-
-			if (MxManual)
-			{
-				// Lock the mutex.
-				Util::WaitForSemaphore(MxSemWaitMutex, INFINITE);
-
-				// Decrease the wait count.
-				Util::WaitForSemaphore(MxSemWaitCount, INFINITE);
-
-				// Release the mutex.
-				sem_post(MxSemWaitMutex);
-			}
-
-			return Result;
+			// Wait for the event.
+			return Util::WaitForUnixEvent(MxPthreadEvent, WaitAmt);
 		}
 
 		bool Event::Fire()
 		{
-			if (MxSemWaitMutex == SEM_FAILED || MxSemWaitEvent == SEM_FAILED)  return false;
+			if (MxMem == NULL)  return false;
 
-			if (MxManual)
-			{
-				// Lock the mutex.
-				if (!Util::WaitForSemaphore(MxSemWaitMutex, INFINITE))  return false;
-
-				// Update the status.  No wait.
-				int Val;
-				sem_getvalue(MxSemWaitStatus, &Val);
-				if (Val == 0)  sem_post(MxSemWaitStatus);
-
-				// Release the mutex.
-				sem_post(MxSemWaitMutex);
-
-				// Release all waiting threads.  Might do too many sem_post() calls.
-				int x;
-				sem_getvalue(MxSemWaitCount, &Val);
-				for (x = 0; x < Val; x++)  sem_post(MxSemWaitEvent);
-			}
-			else
-			{
-				// Release one thread.
-				int Val;
-				sem_getvalue(MxSemWaitEvent, &Val);
-				if (Val == 0)  sem_post(MxSemWaitEvent);
-			}
-
-			return true;
+			return Util::FireUnixEvent(MxPthreadEvent);
 		}
 
 		bool Event::Reset()
 		{
-			if (!MxManual)  return false;
+			if (MxMem == NULL)  return false;
 
-			// Lock the mutex.
-			if (!Util::WaitForSemaphore(MxSemWaitMutex, INFINITE))  return false;
-
-			// Restrict the semaphore.  Fixes the too many sem_post() calls in Fire().
-			while (Util::WaitForSemaphore(MxSemWaitEvent, 0))  {}
-
-			// Update the status.  Start waiting.
-			int Val;
-			sem_getvalue(MxSemWaitStatus, &Val);
-			if (Val == 1)  Util::WaitForSemaphore(MxSemWaitStatus, INFINITE);
-
-			// Release the mutex.
-			sem_post(MxSemWaitMutex);
-
-			return true;
+			return Util::ResetUnixEvent(MxPthreadEvent);
 		}
 #endif
 	}

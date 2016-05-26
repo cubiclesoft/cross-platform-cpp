@@ -1,5 +1,5 @@
 // Cross-platform, optionally named (cross-process), self-counting (recursive) mutex.
-// (C) 2013 CubicleSoft.  All Rights Reserved.
+// (C) 2016 CubicleSoft.  All Rights Reserved.
 
 #ifndef CUBICLESOFT_SYNC_MUTEX
 #define CUBICLESOFT_SYNC_MUTEX
@@ -50,8 +50,9 @@ namespace CubicleSoft
 #else
 			pthread_mutex_t MxPthreadCritSection;
 
-			sem_t *MxSemMutex;
-			bool MxAllocated;
+			bool MxNamed;
+			char *MxMem;
+			Util::UnixSemaphoreWrapper MxPthreadMutex;
 #endif
 
 			volatile ThreadIDType MxOwnerID;

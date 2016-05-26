@@ -1,5 +1,5 @@
 // Cross-platform, optionally named (cross-process), event object (e.g. for producer/consumer queues).
-// (C) 2013 CubicleSoft.  All Rights Reserved.
+// (C) 2016 CubicleSoft.  All Rights Reserved.
 
 #ifndef CUBICLESOFT_SYNC_EVENT
 #define CUBICLESOFT_SYNC_EVENT
@@ -35,9 +35,9 @@ namespace CubicleSoft
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
 			HANDLE MxWinWaitEvent;
 #else
-			sem_t *MxSemWaitMutex, *MxSemWaitEvent, *MxSemWaitCount, *MxSemWaitStatus;
-			bool MxAllocated;
-			bool MxManual;
+			bool MxNamed;
+			char *MxMem;
+			Util::UnixEventWrapper MxPthreadEvent;
 #endif
 		};
 	}

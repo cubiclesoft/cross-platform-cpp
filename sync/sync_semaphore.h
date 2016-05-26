@@ -1,5 +1,5 @@
 // Cross-platform, optionally named (cross-process), semaphore.
-// (C) 2013 CubicleSoft.  All Rights Reserved.
+// (C) 2016 CubicleSoft.  All Rights Reserved.
 
 #ifndef CUBICLESOFT_SYNC_SEMAPHORE
 #define CUBICLESOFT_SYNC_SEMAPHORE
@@ -47,8 +47,9 @@ namespace CubicleSoft
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
 			HANDLE MxWinSemaphore;
 #else
-			sem_t *MxSemSemaphore;
-			bool MxAllocated;
+			bool MxNamed;
+			char *MxMem;
+			Util::UnixSemaphoreWrapper MxPthreadSemaphore;
 #endif
 		};
 	}
