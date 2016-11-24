@@ -53,7 +53,7 @@ namespace CubicleSoft
 
 			char *Name2 = new char[strlen(Name) + 30];
 
-			// Create the mutex and event objects.
+			// Create the mutex object.
 			sprintf(Name2, "%s-%u-Sync_SharedMem-0", Name, (unsigned int)Size);
 			MxWinMutex = ::CreateMutexA(&SecAttr, FALSE, Name2);
 
