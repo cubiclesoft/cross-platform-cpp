@@ -16,32 +16,21 @@ namespace CubicleSoft
 	{
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
 		// Windows.
-		SharedMem::SharedMem() : MxFirst(false), MxSize(0), MxMem(NULL), MxWinMutex(NULL)
+		SharedMem::SharedMem() : MxFirst(false), MxSize(0), MxMem(NULL)
 		{
 		}
 
 		SharedMem::~SharedMem()
 		{
-			if (MxWinMutex != NULL)
-			{
-				::ReleaseMutex(MxWinMutex);
-				::CloseHandle(MxWinMutex);
-			}
-
 			if (MxMem != NULL)  ::UnmapViewOfFile(MxMem);
 		}
 
 		bool SharedMem::Create(const char *Name, size_t Size)
 		{
-			if (MxWinMutex != NULL)
-			{
-				::ReleaseMutex(MxWinMutex);
-				::CloseHandle(MxWinMutex);
-			}
+			if (Name == NULL)  return false;
 
 			if (MxMem != NULL)  ::UnmapViewOfFile(MxMem);
 
-			MxWinMutex = NULL;
 			MxMem = NULL;
 			MxFirst = false;
 
@@ -53,65 +42,31 @@ namespace CubicleSoft
 
 			char *Name2 = new char[strlen(Name) + 30];
 
-			// Create the mutex object.
-			sprintf(Name2, "%s-%u-Sync_SharedMem-0", Name, (unsigned int)Size);
-			MxWinMutex = ::CreateMutexA(&SecAttr, FALSE, Name2);
-
-			if (MxWinMutex == NULL || ::WaitForSingleObject(MxWinMutex, INFINITE) != WAIT_OBJECT_0)
-			{
-				delete[] Name2;
-
-				return false;
-			}
-
 			// Create the file mapping object backed by the system page file.
-			int Result = -1;
-			sprintf(Name2, "%s-%u-Sync_SharedMem-1", Name, (unsigned int)Size);
+			sprintf(Name2, "%s-%u-Sync_SharedMem", Name, (unsigned int)Size);
 			HANDLE TempFile = ::CreateFileMappingA(INVALID_HANDLE_VALUE, &SecAttr, PAGE_READWRITE, 0, (DWORD)Size, Name2);
 			if (TempFile == NULL)
 			{
 				TempFile = ::OpenFileMappingA(FILE_MAP_ALL_ACCESS, TRUE, Name2);
-				if (TempFile != NULL)  Result = 1;
 			}
-			else if (::GetLastError() == ERROR_ALREADY_EXISTS)
+			else if (::GetLastError() != ERROR_ALREADY_EXISTS)
 			{
-				Result = 1;
-			}
-			else
-			{
-				Result = 0;
+				MxFirst = true;
 			}
 
 			delete[] Name2;
 
-			if (TempFile != NULL)
-			{
-				MxMem = (char *)::MapViewOfFile(TempFile, FILE_MAP_ALL_ACCESS, 0, 0, (DWORD)Size);
-				if (MxMem == NULL)  Result = -1;
-				else  MxSize = Size;
+			if (TempFile == NULL)  return false;
 
-				::CloseHandle(TempFile);
-			}
+			MxMem = (char *)::MapViewOfFile(TempFile, FILE_MAP_ALL_ACCESS, 0, 0, (DWORD)Size);
 
-			if (Result == 0)  MxFirst = true;
-			else
-			{
-				::ReleaseMutex(MxWinMutex);
-				::CloseHandle(MxWinMutex);
-				MxWinMutex = NULL;
-			}
+			::CloseHandle(TempFile);
 
-			return (Result > -1);
-		}
+			if (MxMem == NULL)  return false;
 
-		void SharedMem::Ready()
-		{
-			if (MxWinMutex != NULL)
-			{
-				::ReleaseMutex(MxWinMutex);
-				::CloseHandle(MxWinMutex);
-				MxWinMutex = NULL;
-			}
+			MxSize = Size;
+
+			return true;
 		}
 
 #else
@@ -127,6 +82,8 @@ namespace CubicleSoft
 
 		bool SharedMem::Create(const char *Name, size_t Size)
 		{
+			if (Name == NULL)  return false;
+
 			if (MxMemInternal != NULL)  Util::UnmapUnixNamedMem(MxMemInternal, MxSize);
 
 			MxMemInternal = NULL;
@@ -141,15 +98,15 @@ namespace CubicleSoft
 			MxMem = MxMemInternal + Pos;
 			MxSize = Size;
 
-			// Handle the first time this event has been opened.
-			if (Result == 0)  MxFirst = true;
+			// Handle the first time this named memory has been opened.
+			if (Result == 0)
+			{
+				Util::UnixNamedMemReady(MxMemInternal);
 
-			return (Result > -1);
-		}
+				MxFirst = true;
+			}
 
-		void SharedMem::Ready()
-		{
-			if (MxMemInternal != NULL)  Util::UnixNamedMemReady(MxMemInternal);
+			return true;
 		}
 #endif
 	}

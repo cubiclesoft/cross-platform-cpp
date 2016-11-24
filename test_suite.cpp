@@ -511,7 +511,8 @@ int Test_Sync_SharedMem(FILE *Testfp)
 	x = TestSharedMem.Create("test_suite", 150);
 	TEST_COMPARE(x, 1);
 
-	if (TestSharedMem.First())  TestSharedMem.Ready();
+	x = TestSharedMem.First();
+	TEST_COMPARE(x, 1);
 
 	x = (TestSharedMem.GetSize() == 150);
 	TEST_COMPARE(x, 1);
@@ -522,7 +523,8 @@ int Test_Sync_SharedMem(FILE *Testfp)
 	x = TestSharedMem.Create("test_suite", 150);
 	TEST_COMPARE(x, 1);
 
-	if (TestSharedMem.First())  TestSharedMem.Ready();
+	x = TestSharedMem.First();
+	TEST_COMPARE(x, 1);
 
 	x = (TestSharedMem.GetSize() == 150);
 	TEST_COMPARE(x, 1);

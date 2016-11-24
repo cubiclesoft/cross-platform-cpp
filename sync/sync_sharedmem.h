@@ -20,11 +20,8 @@ namespace CubicleSoft
 			// On some platforms (e.g. Windows), the objects may vanish if all handles are freed.
 			bool Create(const char *Name, size_t Size);
 
+			// Returns true if Create() created the shared memory object, false otherwise (i.e. opened an existing object).
 			inline bool First()  { return MxFirst; }
-
-			// When First() is true, call Ready() after initializing the memory.
-			// The shared memory is locked until this function is called.
-			void Ready();
 
 			inline size_t GetSize()  { return MxSize; }
 			inline char *RawData()  { return MxMem; }
@@ -39,7 +36,6 @@ namespace CubicleSoft
 			char *MxMem;
 
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
-			HANDLE MxWinMutex;
 #else
 			char *MxMemInternal;
 #endif
