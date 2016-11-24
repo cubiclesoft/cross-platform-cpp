@@ -16,7 +16,7 @@ namespace CubicleSoft
 			Event();
 			~Event();
 
-			bool Create(const char *Name = NULL, bool Manual = false);
+			bool Create(const char *Name = NULL, bool Manual = false, bool Prefire = false);
 
 			// Wait time is in milliseconds.  Granularity is in 5ms intervals on some platforms.
 			bool Wait(std::uint32_t Wait = INFINITE);

@@ -16,7 +16,7 @@ namespace CubicleSoft
 	{
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
 		// Windows.
-		SharedMem::SharedMem() : MxSize(0), MxMem(NULL), MxWinMutex(NULL), MxWinEvent1(NULL), MxWinEvent2(NULL)
+		SharedMem::SharedMem() : MxFirst(false), MxSize(0), MxMem(NULL), MxWinMutex(NULL)
 		{
 		}
 
@@ -28,12 +28,10 @@ namespace CubicleSoft
 				::CloseHandle(MxWinMutex);
 			}
 
-			if (MxWinEvent1 != NULL)  ::CloseHandle(MxWinEvent1);
-			if (MxWinEvent2 != NULL)  ::CloseHandle(MxWinEvent2);
 			if (MxMem != NULL)  ::UnmapViewOfFile(MxMem);
 		}
 
-		int SharedMem::Create(const char *Name, size_t Size, bool PrefireEvent1, bool PrefireEvent2)
+		bool SharedMem::Create(const char *Name, size_t Size)
 		{
 			if (MxWinMutex != NULL)
 			{
@@ -41,14 +39,11 @@ namespace CubicleSoft
 				::CloseHandle(MxWinMutex);
 			}
 
-			if (MxWinEvent1 != NULL)  ::CloseHandle(MxWinEvent1);
-			if (MxWinEvent2 != NULL)  ::CloseHandle(MxWinEvent2);
 			if (MxMem != NULL)  ::UnmapViewOfFile(MxMem);
 
 			MxWinMutex = NULL;
-			MxWinEvent1 = NULL;
-			MxWinEvent2 = NULL;
 			MxMem = NULL;
+			MxFirst = false;
 
 			SECURITY_ATTRIBUTES SecAttr;
 
@@ -61,23 +56,17 @@ namespace CubicleSoft
 			// Create the mutex and event objects.
 			sprintf(Name2, "%s-%u-Sync_SharedMem-0", Name, (unsigned int)Size);
 			MxWinMutex = ::CreateMutexA(&SecAttr, FALSE, Name2);
-			sprintf(Name2, "%s-%u-Sync_SharedMem-1", Name, (unsigned int)Size);
-			MxWinEvent1 = ::CreateEventA(&SecAttr, FALSE, FALSE, Name2);
-			if (MxWinEvent1 != NULL && PrefireEvent1 && ::GetLastError() != ERROR_ALREADY_EXISTS)  FireEvent1();
-			sprintf(Name2, "%s-%u-Sync_SharedMem-2", Name, (unsigned int)Size);
-			MxWinEvent2 = ::CreateEventA(&SecAttr, FALSE, FALSE, Name2);
-			if (MxWinEvent2 != NULL && PrefireEvent2 && ::GetLastError() != ERROR_ALREADY_EXISTS)  FireEvent2();
 
-			if (MxWinMutex == NULL || MxWinEvent1 == NULL || MxWinEvent2 == NULL || ::WaitForSingleObject(MxWinMutex, INFINITE) != WAIT_OBJECT_0)
+			if (MxWinMutex == NULL || ::WaitForSingleObject(MxWinMutex, INFINITE) != WAIT_OBJECT_0)
 			{
 				delete[] Name2;
 
-				return -1;
+				return false;
 			}
 
 			// Create the file mapping object backed by the system page file.
 			int Result = -1;
-			sprintf(Name2, "%s-%u-Sync_SharedMem-3", Name, (unsigned int)Size);
+			sprintf(Name2, "%s-%u-Sync_SharedMem-1", Name, (unsigned int)Size);
 			HANDLE TempFile = ::CreateFileMappingA(INVALID_HANDLE_VALUE, &SecAttr, PAGE_READWRITE, 0, (DWORD)Size, Name2);
 			if (TempFile == NULL)
 			{
@@ -104,14 +93,15 @@ namespace CubicleSoft
 				::CloseHandle(TempFile);
 			}
 
-			if (Result != 0)
+			if (Result == 0)  MxFirst = true;
+			else
 			{
 				::ReleaseMutex(MxWinMutex);
 				::CloseHandle(MxWinMutex);
 				MxWinMutex = NULL;
 			}
 
-			return Result;
+			return (Result > -1);
 		}
 
 		void SharedMem::Ready()
@@ -124,124 +114,42 @@ namespace CubicleSoft
 			}
 		}
 
-		bool SharedMem::WaitEvent1(std::uint32_t Wait)
-		{
-			if (MxWinEvent1 == NULL)  return false;
-
-			DWORD Result = ::WaitForSingleObject(MxWinEvent1, Wait);
-			if (Result != WAIT_OBJECT_0)  return false;
-
-			return true;
-		}
-
-		bool SharedMem::FireEvent1()
-		{
-			if (MxWinEvent1 == NULL)  return false;
-
-			if (!::SetEvent(MxWinEvent1))  return false;
-
-			return true;
-		}
-
-		bool SharedMem::WaitEvent2(std::uint32_t Wait)
-		{
-			if (MxWinEvent2 == NULL)  return false;
-
-			DWORD Result = ::WaitForSingleObject(MxWinEvent2, Wait);
-			if (Result != WAIT_OBJECT_0)  return false;
-
-			return true;
-		}
-
-		bool SharedMem::FireEvent2()
-		{
-			if (MxWinEvent2 == NULL)  return false;
-
-			if (!::SetEvent(MxWinEvent2))  return false;
-
-			return true;
-		}
-
 #else
 		// POSIX pthreads.
-		SharedMem::SharedMem() : MxSize(0), MxMem(NULL), MxMemInternal(NULL)
+		SharedMem::SharedMem() : MxFirst(false), MxSize(0), MxMem(NULL), MxMemInternal(NULL)
 		{
 		}
 
 		SharedMem::~SharedMem()
 		{
-			if (MxMemInternal != NULL)  Util::UnmapUnixNamedMem(MxMemInternal, Util::GetUnixEventSize() * 2 + MxSize);
+			if (MxMemInternal != NULL)  Util::UnmapUnixNamedMem(MxMemInternal, MxSize);
 		}
 
-		int SharedMem::Create(const char *Name, size_t Size, bool PrefireEvent1, bool PrefireEvent2)
+		bool SharedMem::Create(const char *Name, size_t Size)
 		{
-			if (MxMemInternal != NULL)  Util::UnmapUnixNamedMem(MxMemInternal, Util::GetUnixEventSize() * 2 + MxSize);
+			if (MxMemInternal != NULL)  Util::UnmapUnixNamedMem(MxMemInternal, MxSize);
 
 			MxMemInternal = NULL;
 			MxMem = NULL;
 
-			size_t Pos, TempSize = Util::GetUnixEventSize() * 2 + Size;
+			size_t Pos, TempSize = Size;
 			int Result = Util::InitUnixNamedMem(MxMemInternal, Pos, "/Sync_SharedMem", Name, TempSize);
 
 			if (Result < 0)  return false;
 
 			// Load the pointers.
-			char *MemPtr = MxMemInternal + Pos;
-			Util::GetUnixEvent(MxPthreadEvent1, MemPtr);
-			MemPtr += Util::GetUnixEventSize();
-
-			Util::GetUnixEvent(MxPthreadEvent2, MemPtr);
-			MemPtr += Util::GetUnixEventSize();
-
-			MxMem = MemPtr;
+			MxMem = MxMemInternal + Pos;
 			MxSize = Size;
 
 			// Handle the first time this event has been opened.
-			if (Result == 0)
-			{
-				Util::InitUnixEvent(MxPthreadEvent1, true, false);
-				Util::InitUnixEvent(MxPthreadEvent2, true, false);
+			if (Result == 0)  MxFirst = true;
 
-				if (PrefireEvent1)  FireEvent1();
-				if (PrefireEvent2)  FireEvent2();
-			}
-
-			return Result;
+			return (Result > -1);
 		}
 
 		void SharedMem::Ready()
 		{
 			if (MxMemInternal != NULL)  Util::UnixNamedMemReady(MxMemInternal);
-		}
-
-		bool SharedMem::WaitEvent1(std::uint32_t Wait)
-		{
-			if (MxMemInternal == NULL)  return false;
-
-			// Wait for the event.
-			return Util::WaitForUnixEvent(MxPthreadEvent1, Wait);
-		}
-
-		bool SharedMem::FireEvent1()
-		{
-			if (MxMemInternal == NULL)  return false;
-
-			return Util::FireUnixEvent(MxPthreadEvent1);
-		}
-
-		bool SharedMem::WaitEvent2(std::uint32_t Wait)
-		{
-			if (MxMemInternal == NULL)  return false;
-
-			// Wait for the event.
-			return Util::WaitForUnixEvent(MxPthreadEvent2, Wait);
-		}
-
-		bool SharedMem::FireEvent2()
-		{
-			if (MxMemInternal == NULL)  return false;
-
-			return Util::FireUnixEvent(MxPthreadEvent2);
 		}
 #endif
 	}

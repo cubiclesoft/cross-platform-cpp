@@ -507,13 +507,11 @@ int Test_Sync_SharedMem(FILE *Testfp)
 
 	CubicleSoft::Sync::SharedMem TestSharedMem;
 	bool x;
-	int Result;
 
-	Result = TestSharedMem.Create("test_suite", 150, true, false);
-	x = (Result == 0);
+	x = TestSharedMem.Create("test_suite", 150);
 	TEST_COMPARE(x, 1);
 
-	if (!Result)  TestSharedMem.Ready();
+	if (TestSharedMem.First())  TestSharedMem.Ready();
 
 	x = (TestSharedMem.GetSize() == 150);
 	TEST_COMPARE(x, 1);
@@ -521,11 +519,10 @@ int Test_Sync_SharedMem(FILE *Testfp)
 	strcpy(TestSharedMem.RawData(), "test");
 
 	// Close all handles and then reconnect.  However, the data written should NOT be there since all references went away.
-	Result = TestSharedMem.Create("test_suite", 150, true, false);
-	x = (Result == 0);
+	x = TestSharedMem.Create("test_suite", 150);
 	TEST_COMPARE(x, 1);
 
-	if (!Result)  TestSharedMem.Ready();
+	if (TestSharedMem.First())  TestSharedMem.Ready();
 
 	x = (TestSharedMem.GetSize() == 150);
 	TEST_COMPARE(x, 1);

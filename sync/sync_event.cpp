@@ -18,7 +18,7 @@ namespace CubicleSoft
 			if (MxWinWaitEvent != NULL)  ::CloseHandle(MxWinWaitEvent);
 		}
 
-		bool Event::Create(const char *Name, bool Manual)
+		bool Event::Create(const char *Name, bool Manual, bool Prefire)
 		{
 			if (MxWinWaitEvent != NULL)  ::CloseHandle(MxWinWaitEvent);
 
@@ -30,7 +30,7 @@ namespace CubicleSoft
 			SecAttr.lpSecurityDescriptor = NULL;
 			SecAttr.bInheritHandle = TRUE;
 
-			MxWinWaitEvent = ::CreateEventA(&SecAttr, (BOOL)Manual, FALSE, Name);
+			MxWinWaitEvent = ::CreateEventA(&SecAttr, (BOOL)Manual, (Prefire ? TRUE : FALSE), Name);
 
 			if (MxWinWaitEvent == NULL)  return false;
 
@@ -84,7 +84,7 @@ namespace CubicleSoft
 			}
 		}
 
-		bool Event::Create(const char *Name, bool Manual)
+		bool Event::Create(const char *Name, bool Manual, bool Prefire)
 		{
 			if (MxMem != NULL)
 			{
@@ -110,7 +110,7 @@ namespace CubicleSoft
 			// Handle the first time this event has been opened.
 			if (Result == 0)
 			{
-				Util::InitUnixEvent(MxPthreadEvent, MxNamed, Manual);
+				Util::InitUnixEvent(MxPthreadEvent, MxNamed, Manual, Prefire);
 
 				if (MxNamed)  Util::UnixNamedMemReady(MxMem);
 			}

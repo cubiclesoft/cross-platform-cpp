@@ -481,7 +481,7 @@ namespace CubicleSoft
 			Result.MxCond = reinterpret_cast<pthread_cond_t *>(Mem);
 		}
 
-		void Util::InitUnixEvent(UnixEventWrapper &UnixEvent, bool Shared, bool Manual)
+		void Util::InitUnixEvent(UnixEventWrapper &UnixEvent, bool Shared, bool Manual, bool Signaled)
 		{
 			pthread_mutexattr_t MutexAttr;
 			pthread_condattr_t CondAttr;
@@ -497,7 +497,7 @@ namespace CubicleSoft
 
 			pthread_mutex_init(UnixEvent.MxMutex, &MutexAttr);
 			UnixEvent.MxManual[0] = (Manual ? '\x01' : '\x00');
-			UnixEvent.MxSignaled[0] = '\x00';
+			UnixEvent.MxSignaled[0] = (Signaled ? '\x01' : '\x00');
 			UnixEvent.MxWaiting[0] = 0;
 			pthread_cond_init(UnixEvent.MxCond, &CondAttr);
 

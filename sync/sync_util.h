@@ -76,7 +76,7 @@ namespace CubicleSoft
 
 			static size_t GetUnixEventSize();
 			static void GetUnixEvent(UnixEventWrapper &Result, char *Mem);
-			static void InitUnixEvent(UnixEventWrapper &UnixEvent, bool Shared, bool Manual);
+			static void InitUnixEvent(UnixEventWrapper &UnixEvent, bool Shared, bool Manual, bool Signaled = false);
 			static bool WaitForUnixEvent(UnixEventWrapper &UnixEvent, std::uint32_t Wait);
 			static bool FireUnixEvent(UnixEventWrapper &UnixEvent);
 			static bool ResetUnixEvent(UnixEventWrapper &UnixEvent);

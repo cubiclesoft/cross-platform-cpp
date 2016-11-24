@@ -246,8 +246,7 @@ namespace CubicleSoft
 			{
 				Util::InitUnixSemaphore(MxPthreadRCountMutex, MxNamed, 1, 1);
 				MxRCount[0] = 0;
-				Util::InitUnixEvent(MxPthreadRWaitEvent, MxNamed, true);
-				Util::FireUnixEvent(MxPthreadRWaitEvent);
+				Util::InitUnixEvent(MxPthreadRWaitEvent, MxNamed, true, true);
 				Util::InitUnixSemaphore(MxPthreadWWaitMutex, MxNamed, 1, 1);
 
 				if (MxNamed)  Util::UnixNamedMemReady(MxMem);
