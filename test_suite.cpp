@@ -519,7 +519,23 @@ int Test_Sync_SharedMem(FILE *Testfp)
 
 	strcpy(TestSharedMem.RawData(), "test");
 
-	// Close all handles and then reconnect.  However, the data written should NOT be there since all references went away.
+	{
+		CubicleSoft::Sync::SharedMem TestSharedMem2;
+
+		x = TestSharedMem2.Create("test_suite", 150);
+		TEST_COMPARE(x, 1);
+
+		x = TestSharedMem2.First();
+		TEST_COMPARE(x, 0);
+
+		x = (TestSharedMem2.GetSize() == 150);
+		TEST_COMPARE(x, 1);
+
+		x = (memcmp(TestSharedMem2.RawData(), "test", 5) == 0);
+		TEST_COMPARE(x, 1);
+	}
+
+	// Close all handles and then reconnect.  The data written before should not be there since all references are removed.
 	x = TestSharedMem.Create("test_suite", 150);
 	TEST_COMPARE(x, 1);
 

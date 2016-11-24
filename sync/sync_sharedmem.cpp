@@ -16,13 +16,14 @@ namespace CubicleSoft
 	{
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
 		// Windows.
-		SharedMem::SharedMem() : MxFirst(false), MxSize(0), MxMem(NULL)
+		SharedMem::SharedMem() : MxFirst(false), MxSize(0), MxMem(NULL), MxFile(NULL)
 		{
 		}
 
 		SharedMem::~SharedMem()
 		{
 			if (MxMem != NULL)  ::UnmapViewOfFile(MxMem);
+			if (MxFile != NULL)  ::CloseHandle(MxFile);
 		}
 
 		bool SharedMem::Create(const char *Name, size_t Size)
@@ -30,8 +31,10 @@ namespace CubicleSoft
 			if (Name == NULL)  return false;
 
 			if (MxMem != NULL)  ::UnmapViewOfFile(MxMem);
+			if (MxFile != NULL)  ::CloseHandle(MxFile);
 
 			MxMem = NULL;
+			MxFile = NULL;
 			MxFirst = false;
 
 			SECURITY_ATTRIBUTES SecAttr;
@@ -44,10 +47,11 @@ namespace CubicleSoft
 
 			// Create the file mapping object backed by the system page file.
 			sprintf(Name2, "%s-%u-Sync_SharedMem", Name, (unsigned int)Size);
-			HANDLE TempFile = ::CreateFileMappingA(INVALID_HANDLE_VALUE, &SecAttr, PAGE_READWRITE, 0, (DWORD)Size, Name2);
-			if (TempFile == NULL)
+			MxFile = ::CreateFileMappingA(INVALID_HANDLE_VALUE, &SecAttr, PAGE_READWRITE, 0, (DWORD)Size, Name2);
+			if (MxFile == NULL)
 			{
-				TempFile = ::OpenFileMappingA(FILE_MAP_ALL_ACCESS, TRUE, Name2);
+				MxFile = ::OpenFileMappingA(FILE_MAP_ALL_ACCESS, TRUE, Name2);
+				if (MxFile == NULL)  return false;
 			}
 			else if (::GetLastError() != ERROR_ALREADY_EXISTS)
 			{
@@ -56,12 +60,7 @@ namespace CubicleSoft
 
 			delete[] Name2;
 
-			if (TempFile == NULL)  return false;
-
-			MxMem = (char *)::MapViewOfFile(TempFile, FILE_MAP_ALL_ACCESS, 0, 0, (DWORD)Size);
-
-			::CloseHandle(TempFile);
-
+			MxMem = (char *)::MapViewOfFile(MxFile, FILE_MAP_ALL_ACCESS, 0, 0, (DWORD)Size);
 			if (MxMem == NULL)  return false;
 
 			MxSize = Size;
