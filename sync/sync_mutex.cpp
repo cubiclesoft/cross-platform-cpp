@@ -26,24 +26,21 @@ namespace CubicleSoft
 		{
 			::EnterCriticalSection(&MxWinCritSection);
 
-			if (MxWinMutex != NULL)
+			if (MxCount > 0)
 			{
-				if (MxOwnerID > 0)
+				if (MxOwnerID == Util::GetCurrentThreadID())
 				{
-					if (MxOwnerID == Util::GetCurrentThreadID())
-					{
-						::ReleaseMutex(MxWinMutex);
-						::CloseHandle(MxWinMutex);
-						MxWinMutex = NULL;
-						MxCount = 0;
-						MxOwnerID = 0;
-					}
-					else
-					{
-						::LeaveCriticalSection(&MxWinCritSection);
+					::ReleaseMutex(MxWinMutex);
+					::CloseHandle(MxWinMutex);
+					MxWinMutex = NULL;
+					MxCount = 0;
+					MxOwnerID = 0;
+				}
+				else
+				{
+					::LeaveCriticalSection(&MxWinCritSection);
 
-						return false;
-					}
+					return false;
 				}
 			}
 
@@ -156,7 +153,7 @@ namespace CubicleSoft
 		{
 			if (pthread_mutex_lock(&MxPthreadCritSection) != 0)  return false;
 
-			if (MxOwnerID > 0)
+			if (MxCount > 0)
 			{
 				if (MxOwnerID == Util::GetCurrentThreadID())
 				{
