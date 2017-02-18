@@ -520,7 +520,7 @@ namespace CubicleSoft
 			bool Result = false;
 
 			// Avoid a potential starvation issue by only allowing signaled manual events OR if there are no other waiting threads.
-			if (UnixEvent.MxSignaled[0] != '\x00' && (UnixEvent.MxManual[0] == '\x00' || !UnixEvent.MxWaiting[0]))
+			if (UnixEvent.MxSignaled[0] != '\x00' && (UnixEvent.MxManual[0] != '\x00' || !UnixEvent.MxWaiting[0]))
 			{
 				// Reset auto events.
 				if (UnixEvent.MxManual[0] == '\x00')  UnixEvent.MxSignaled[0] = '\x00';
@@ -595,7 +595,7 @@ namespace CubicleSoft
 			UnixEvent.MxSignaled[0] = '\x01';
 
 			// Let all waiting threads through for manual events, otherwise just one waiting thread (if any).
-			if (UnixEvent.MxManual[0] == '\x00')  pthread_cond_broadcast(UnixEvent.MxCond);
+			if (UnixEvent.MxManual[0] != '\x00')  pthread_cond_broadcast(UnixEvent.MxCond);
 			else  pthread_cond_signal(UnixEvent.MxCond);
 
 			pthread_mutex_unlock(UnixEvent.MxMutex);
