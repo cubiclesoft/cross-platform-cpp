@@ -538,10 +538,10 @@ namespace CubicleSoft
 					if (Result2 != 0)  break;
 				} while (UnixEvent.MxSignaled[0] == '\x00');
 
+				UnixEvent.MxWaiting[0]--;
+
 				if (Result2 == 0)
 				{
-					UnixEvent.MxWaiting[0]--;
-
 					// Reset auto events.
 					if (UnixEvent.MxManual[0] == '\x00')  UnixEvent.MxSignaled[0] = '\x00';
 
@@ -554,15 +554,21 @@ namespace CubicleSoft
 			}
 			else
 			{
-				UnixEvent.MxWaiting[0]++;
-
 				struct timespec TempTime;
 
-				if (CSGX__ClockGetTimeRealtime(&TempTime) == -1)  return false;
+				if (CSGX__ClockGetTimeRealtime(&TempTime) == -1)
+				{
+					pthread_mutex_unlock(UnixEvent.MxMutex);
+
+					return false;
+				}
+
 				TempTime.tv_sec += Wait / 1000;
 				TempTime.tv_nsec += (Wait % 1000) * 1000000;
 				TempTime.tv_sec += TempTime.tv_nsec / 1000000000;
 				TempTime.tv_nsec = TempTime.tv_nsec % 1000000000;
+
+				UnixEvent.MxWaiting[0]++;
 
 				int Result2;
 				do
@@ -572,10 +578,10 @@ namespace CubicleSoft
 					if (Result2 != 0)  break;
 				} while (UnixEvent.MxSignaled[0] == '\x00');
 
+				UnixEvent.MxWaiting[0]--;
+
 				if (Result2 == 0)
 				{
-					UnixEvent.MxWaiting[0]--;
-
 					// Reset auto events.
 					if (UnixEvent.MxManual[0] == '\x00')  UnixEvent.MxSignaled[0] = '\x00';
 
