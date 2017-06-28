@@ -1489,6 +1489,20 @@ namespace CubicleSoft
 			if (x2 >= ResultSize)  return false;
 			Result[x2] = '\0';
 
+			// Replace '/SomeDirectory/../' with '/'
+			x2 = 0;
+			for (x = 0; x < y; x++)
+			{
+				if( Result[x] == '/'	 &&
+					Result[x + 1] == '.' &&
+					Result[x + 2] == '.' ) {
+					x2 = x - 2;
+					while (x2 > 0 && Result[x2] != '/') x2--;
+					size_t x3 = x + 3;
+					while (Result[x2] != '\0') Result[x2++] = Result[x3++];
+				}
+			}
+
 			// Sanity check.
 			for (x = 0; x < x2; x++)
 			{
