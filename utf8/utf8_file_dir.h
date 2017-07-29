@@ -200,7 +200,13 @@ private:
 
 			// Some static functions specifically for directories.  Some functions are possibly not thread-safe.
 			static bool Getcwd(char *Result, size_t ResultSize);
+
+			// Unlike most directory/file calls, UTF8::Dir::Mkdir() is more difficult to use because Dirname must reference an
+			// absolute path but UTF8::File::Realpath() can't be used on the complete calculation since one or more directories
+			// likely don't exist (yet).  Use UTF8::File::Realpath() to transform the known existing part of the path and then
+			// carefully concatenate the new path item(s) and call UTF8::Dir::Mkdir().
 			static bool Mkdir(const char *Dirname, int Mode = 0777, bool Recursive = false);
+
 			static bool Rmdir(const char *Dirname, bool Recursive = false);
 
 		private:
