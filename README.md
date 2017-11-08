@@ -84,6 +84,8 @@ Running PackedOrderedHash speed tests...
         String keys, find performance (1 million nodes) - 13,426,850 nodes/sec
 ```
 
+System used for example output above:  Intel i7-6700K @ 4GHz, 32GB RAM, Windows 10 Pro
+
 Notes
 -----
 
