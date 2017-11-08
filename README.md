@@ -27,7 +27,8 @@ Features
 * Cache support.  A C++ template that implements a partial hash.
 * Static vector implementation.
 * Integer to string conversion.  With file size options as well (i.e. MB, GB, etc).
-* Minimal Unicode conversion support.
+* Packed ordered hash.  Up to three times faster than the detachable node OrderedHash.
+* Minimalist Unicode conversion support.  Just enough useful logic without having to drag in a multi-MB Unicode support library.
 * Cross-platform, UTF-8 file and directory manipulation classes.
 * Cross-platform, UTF-8 storage location functions (e.g. a user's home folder).
 * FastFind and FastReplace templates.  Works on any binary data.  FastFind probably outperforms std::search (See Notes).  FastReplace supports alternate allocators (e.g. Sync::TLS) and comparison functions (e.g. case-insensitive comparison).
@@ -47,6 +48,7 @@ The following commands will run various performance benchmarks:
 * test_suite hashkey
 * test_suite list
 * test_suite hash
+* test_suite loop  (Helps identify bad benchmarks)
 
 Output looks like:
 
@@ -55,23 +57,31 @@ Output looks like:
 List performance benchmark
 --------------------------
 Running List speed tests...
-        Insertion - 11,862,374 nodes added/sec
-        Detach/attach performance - 45,876,682 nodes/sec
-        Find performance (1 million nodes) - 16,261 nodes/sec
+        Insertion - 23,179,293 nodes added/sec
+        Detach/attach performance - 64,911,010 nodes/sec
+        Find performance (1 million nodes) - 17,245 nodes/sec
 
 
 # test_suite hash
 Hash performance benchmark
 --------------------------
 Running OrderedHash speed tests...
-        Integer keys, djb2 hash keys - 3,179,601 nodes added/sec
-        String keys, djb2 hash keys - 2,097,149 nodes added/sec
-        Integer keys, SipHash hash keys - 1,848,400 nodes added/sec
-        String keys, SipHash hash keys - 1,568,873 nodes added/sec
-        Integer keys, detach/attach performance - 8,142,761 nodes/sec
-        String keys, detach/attach performance - 6,016,954 nodes/sec
-        Integer keys, find performance (1 million nodes) - 11,166,893 nodes/sec
-        String keys, find performance (1 million nodes) - 6,819,220 nodes/sec
+        Integer keys, djb2 hash keys - 5,905,388 nodes added/sec
+        String keys, djb2 hash keys - 3,500,444 nodes added/sec
+        Integer keys, SipHash hash keys - 2,578,463 nodes added/sec
+        String keys, SipHash hash keys - 2,180,187 nodes added/sec
+        Integer keys, detach/attach performance - 19,256,672 nodes/sec
+        String keys, detach/attach performance - 11,858,135 nodes/sec
+        Integer keys, find performance (1 million nodes) - 8,277,900 nodes/sec
+        String keys, find performance (1 million nodes) - 6,764,330 nodes/sec
+
+Running PackedOrderedHash speed tests...
+        Integer keys, djb2 hash keys - 17,638,442 nodes added/sec
+        String keys, djb2 hash keys - 5,592,405 nodes added/sec
+        Integer keys, SipHash hash keys - 3,154,760 nodes added/sec
+        String keys, SipHash hash keys - 3,713,171 nodes added/sec
+        Integer keys, find performance (1 million nodes) - 22,020,249 nodes/sec
+        String keys, find performance (1 million nodes) - 13,426,850 nodes/sec
 ```
 
 Notes
@@ -79,10 +89,14 @@ Notes
 
 Some classes require files in the 'templates' subdirectory.  However, again, the number of dependencies is kept to the bare minimum for proper functionality.  These templates were written primarily to reduce the overall size of object files, but a few of them introduce several features that are missing in the Standard library.  Plus the Standard library templates tend to be rather heavy.
 
-In testing, Sync::TLS outperformed system malloc()/free() by a factor of 1.8 to 19.0 times on a single thread.  Performance varied depending on hardware, OS, and compiler settings.  The approach I used appears to be similar to TCMalloc (both utilize Thread Local Storage in a similar manner), but Sync::TLS has a much simpler implementation and is intended for short-lived data that would normally be placed in a fixed-size stack.  Multithreading was not tested but there are probably significant additional performance improvements over system malloc()/free() due to the utilization of Thread Local Storage.
+In testing, Sync::TLS outperformed system malloc()/free() by a factor of 1.8 to 19.0 times on a single thread.  Performance varied greatly depending on hardware, OS, and compiler settings.  The approach I used appears to be similar to TCMalloc (both utilize Thread Local Storage in a similar manner), but Sync::TLS has a much simpler implementation and is intended for short-lived data that would normally be placed in a fixed-size stack.  Multithreading was not tested but there are probably significant additional performance improvements over system malloc()/free() due to the utilization of Thread Local Storage.
 
 There are three very slow operations in all programs:  External data access (e.g. hard drive, network), memory allocations, and system calls - in that order.  Detachable nodes in data structures help mitigate the second problem.
 
-The detachable node ordered hash is similar to PHP arrays.  It accepts both integer and string keys in the same hash, has almost constant time insert, lookup, delete, and iteration operations, and, most importantly, maintains the desired order of elements.  This is the last std::map-like C++ data structure you will ever need.
+The detachable node ordered hash is similar to PHP 5 arrays.  It accepts both integer and string keys in the same hash, has almost constant time insert, lookup, delete, and iteration operations, and, most importantly, maintains the desired order of elements.  This is almost the last std::map-like C++ data structure you will ever need.
+
+The packed ordered hash is similar to PHP 7 arrays.  This class implements a hybrid array + hash and accepts both integer and string keys in the same hash but has better performance metrics for the specific but common scenario of inserting new nodes only at the end.  Each node only has 24 bytes of overhead instead of the 56 bytes of overhead for OrderedHashNode on 64-bit OSes.  Nodes are inline and therefore can't be detached, but they can be overwritten and unset.  The tradeoff for inline nodes is reduced memory overhead, generally fewer allocations, and increased performance by leveraging CPU cache lines.  The test suite benchmarks show up to a 3x improvement in performance over OrderedHash.
+
+Handling Unicode is HARD.  Once upon a time, many years ago, I started writing my own Unicode implementation but eventually gave up.  There are three main sections of code plus large lookup tables in a full-blown, up-to-date Unicode implementation:  Code point handling (easy-ish), Combining and Precomposed characters, Line Breaking, and Normalization (hard), and finally Case Folding (nearly impossible).  Code point handling is all this snippet library offers and so all Unicode strings that you handle should generally be treated as opaque data.  If you need something more refined than code points in C++, then there is only one legitimate option, which is the IBM ICU implementation of Unicode but will add ~25MB of dependencies to your project.  For some reason I can't find my original software, but I recall getting through the aforementioned Hard bits with around 65KB of lookup tables for common Normalization and the code even supported unlimited combining code points, which was very cool but extremely nerdy.  Regardless, 65KB of tables doesn't really work well for this project (i.e. it wouldn't really count as a "snippet").  Therefore, only code point handling makes any sense.  Note that applications on Windows that use the UTF-8 code snippets for directory and file management will run a bit slower than their *NIX counterparts due to translating between UTF-8 and UTF-16 with correct surrogate support for the latter, of course.
 
 FastFind has an average case (and probably worst case) of O(5n) or better, which is implicitly better than the naive std::search() O(m * n).  Up to five "points of interest" are located in the pattern - beginning, end, two minimal values, and one midpoint - to minimize the number of compares before performing the full comparison.  This approach mitigates security vulnerabilities in naive implementations while simultaneously outperforming most alternate algorithms including Knuth-Morris-Pratt and Boyer–Moore that construct a lookup table (i.e. allocate memory - a rather sluggish operation not needed for the average string search).

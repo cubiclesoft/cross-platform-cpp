@@ -30,6 +30,7 @@
 #include "templates/static_2d_array.h"
 #include "templates/static_mixed_var.h"
 #include "templates/fast_find_replace.h"
+#include "templates/packed_ordered_hash.h"
 #include "environment/environment_appinfo.h"
 #include "utf8/utf8_util.h"
 #include "utf8/utf8_appinfo.h"
@@ -50,6 +51,7 @@ CubicleSoft::Sync::TLS::MixedVar GxSyncTLSMixedVar;
 CubicleSoft::Cache<int, int> GxCache(11);
 CubicleSoft::List<int> GxList;
 CubicleSoft::OrderedHash<int> GxOrderedHash(47);
+CubicleSoft::PackedOrderedHash<int> GxPackedOrderedHash(32);
 CubicleSoft::Queue<int> GxQueue;
 CubicleSoft::StaticVector<int> GxStaticVector(10);
 CubicleSoft::Static2DArray<int> GxStatic2DArray(20, 2);
@@ -637,7 +639,10 @@ int Test_Templates_OrderedHash(FILE *Testfp)
 
 	// Test existence.
 	x = true;
-	for (x2 = 0; x2 < 100 && x; x2++)  x = (TestHash.Find(x2) != NULL);
+	for (x2 = 0; x2 < 100 && x; x2++)
+	{
+		if (x)  x = (TestHash.Find(x2) != NULL);
+	}
 	if (x)  x = (TestHash.Find("", 1) != NULL);
 	if (x)  x = (TestHash.Find("test", 5) != NULL);
 	TEST_COMPARE(x, 1);
@@ -645,11 +650,7 @@ int Test_Templates_OrderedHash(FILE *Testfp)
 	// Test order.
 	x = true;
 	Node = TestHash.FirstList();
-	for (x2 = 0; x2 < 100 && x; x2++)
-	{
-		x = (Node->GetStrKey() == NULL && Node->GetIntKey() == x2 && Node->Value == x2);
-		Node = Node->NextList();
-	}
+	for (x2 = 0; x2 < 100 && x; x2++)  x = (TestHash.Find(x2) != NULL);
 	if (x)
 	{
 		x = (Node->GetStrKey() != NULL && Node->GetIntKey() == 1 && Node->Value == x2);
@@ -975,6 +976,64 @@ int Test_Templates_FastFindReplace(FILE *Testfp)
 	y = TempBuffer2.GetMaxSize();
 	x = (CubicleSoft::FastReplace<char>::StaticReplaceAll(TempBuffer2.GetStr(), y, TempBuffer.GetStr(), TempBuffer.GetSize(), "@REALLYLONGTOKEN@", (size_t)-1, "long replacement string", (size_t)-1) == 1);
 	TempBuffer2.SetSize(y);
+	TEST_COMPARE(x, 1);
+
+	TEST_SUMMARY();
+
+	TEST_RETURN();
+}
+
+int Test_Templates_PackedOrderedHash(FILE *Testfp)
+{
+	TEST_START(Test_Templates_PackedOrderedHash);
+
+	CubicleSoft::PackedOrderedHash<int> TestHash(32);
+	CubicleSoft::PackedOrderedHashNode<int> *Node, *Nodes = NULL;
+	bool x;
+	int x2;
+
+	for (x2 = 0; x2 < 100; x2++)  TestHash.Set(x2, x2);
+	TestHash.Set("", 1, x2++);
+	TestHash.Set("test", 5, x2++);
+
+	x = (TestHash.GetSize() == 102);
+	TEST_COMPARE(x, 1);
+
+	// Test existence.
+	x = true;
+	for (x2 = 0; x2 < 100 && x; x2++)  x = (TestHash.Find(x2) != NULL);
+	if (x)  x = (TestHash.Find("", 1) != NULL);
+	if (x)  x = (TestHash.Find("test", 5) != NULL);
+	TEST_COMPARE(x, 1);
+
+	// Test order.
+	x = true;
+	size_t Pos = TestHash.GetNextPos();
+	for (x2 = 0; x2 < 100 && x; x2++)
+	{
+		Node = TestHash.Next(Pos);
+		x = (Node != NULL && Node->GetStrKey() == NULL && Node->GetIntKey() == x2 && Node->Value == x2);
+	}
+	if (x)
+	{
+		Node = TestHash.Next(Pos);
+		x = (Node != NULL && Node->GetStrKey() != NULL && Node->GetStrLen() == 1 && Node->Value == x2);
+		x2++;
+	}
+	if (x)
+	{
+		Node = TestHash.Next(Pos);
+		x = (Node != NULL && Node->GetStrKey() != NULL && Node->GetStrLen() == 5 && Node->Value == x2);
+		x2++;
+	}
+	TEST_COMPARE(x, 1);
+
+	// Test unset.
+	x = true;
+	for (x2 = 0; x2 < 100 && x; x2++)  x = TestHash.Unset(x2);
+	TEST_COMPARE(x, 1);
+
+	x = (TestHash.GetSize() == 2);
 	TEST_COMPARE(x, 1);
 
 	TEST_SUMMARY();
@@ -1314,6 +1373,9 @@ int Test_UTF8_Dir(FILE *Testfp)
 	TEST_RETURN();
 }
 
+#pragma optimize("", off)
+#pragma GCC push_options
+#pragma GCC optimize("O0")
 
 int main(int argc, char **argv)
 {
@@ -1329,6 +1391,7 @@ int main(int argc, char **argv)
 		Test_Templates_Cache(stdout);
 		Test_Templates_List(stdout);
 		Test_Templates_OrderedHash(stdout);
+		Test_Templates_PackedOrderedHash(stdout);
 		Test_Templates_Queue(stdout);
 		Test_Templates_StaticVector(stdout);
 		Test_Templates_Static2DArray(stdout);
@@ -1341,6 +1404,37 @@ int main(int argc, char **argv)
 		Test_UTF8_AppInfo(stdout, argv[0]);
 		Test_UTF8_File(stdout);
 		Test_UTF8_Dir(stdout);
+	}
+	else if (!strcmp("loop", argv[1]))
+	{
+		// NOTE:  Any given benchmark is strongly suspect if it produces nonsensical numbers such as "150 million nodes/sec".
+		//        That could simply mean the important code bits were optimized away by the compiler into a while loop that does nothing.
+		//        This benchmark can be used to confirm that such an optimization has taken place without having to delve into an assembler.
+
+		printf("Generic while loop\n");
+		printf("------------------\n");
+
+		char FinalNum[100];
+		std::uint32_t x;
+
+		printf("Empty while loop speed test...");
+
+		{
+			// Baseline for failure.
+			x = 0;
+			time_t t1 = time(NULL);
+			while (time(NULL) == t1)  {}
+			t1 = time(NULL) + 3;
+			while (t1 > time(NULL))
+			{
+				x++;
+			}
+
+			CubicleSoft::Convert::Int::ToString(FinalNum, 100, (std::uint64_t)(x / 3), ',');
+			printf("\n\t%s iterations/sec", FinalNum);
+		}
+
+		printf("\n\n");
 	}
 	else if (!strcmp("synctls", argv[1]))
 	{
@@ -1482,6 +1576,8 @@ int main(int argc, char **argv)
 
 			while (y)  free(Data[--y]);
 		}
+
+		printf("\n\n");
 	}
 	else if (!strcmp("hashkey", argv[1]))
 	{
@@ -1553,6 +1649,8 @@ int main(int argc, char **argv)
 		char NumNodes[100];
 		std::uint32_t x, y;
 
+		srand((unsigned int)time(NULL));
+
 		printf("Running List speed tests...");
 
 		{
@@ -1607,9 +1705,10 @@ int main(int argc, char **argv)
 			t1 = time(NULL) + 3;
 			while (t1 > time(NULL))
 			{
-				y = x % 1000000;
+				y = rand() % 1000000;
 				Node = TempList.First();
 				while (Node->Value != y)  Node = Node->Next();
+				if (Node == NULL)  printf("Unable to find node!\n");
 
 				x++;
 			}
@@ -1767,7 +1866,8 @@ int main(int argc, char **argv)
 			t1 = time(NULL) + 3;
 			while (t1 > time(NULL))
 			{
-				Node = TempHash.Find(x % 1000000);
+				Node = TempHash.Find(rand() % 1000000);
+				if (Node == NULL)  printf("Unable to find node!\n");
 
 				x++;
 			}
@@ -1793,8 +1893,139 @@ int main(int argc, char **argv)
 			t1 = time(NULL) + 3;
 			while (t1 > time(NULL))
 			{
-				((std::uint32_t *)Str)[5] = x % 1000000;
+				((std::uint32_t *)Str)[5] = rand() % 1000000;
 				Node = TempHash.Find(Str, 30);
+				if (Node == NULL)  printf("Unable to find node!\n");
+
+				x++;
+			}
+
+			CubicleSoft::Convert::Int::ToString(NumNodes, 100, (std::uint64_t)(x / 3), ',');
+			printf("\n\tString keys, find performance (1 million nodes) - %s nodes/sec", NumNodes);
+		}
+
+		printf("\n\n");
+
+		printf("Running PackedOrderedHash speed tests...");
+
+		{
+			// Integer keys, djb2 hash keys.
+			x = 0;
+			time_t t1 = time(NULL);
+			while (time(NULL) == t1)  {}
+			t1 = time(NULL) + 3;
+			CubicleSoft::PackedOrderedHash<std::uint32_t> TempHash(3);
+			while (t1 > time(NULL))
+			{
+				TempHash.Set(x, x);
+
+				x++;
+			}
+
+			CubicleSoft::Convert::Int::ToString(NumNodes, 100, (std::uint64_t)(x / 3), ',');
+			printf("\n\tInteger keys, djb2 hash keys - %s nodes added/sec", NumNodes);
+		}
+
+		{
+			// String keys (raw bytes of the integer implanted into the hash), djb2 hash keys.
+			x = 0;
+			time_t t1 = time(NULL);
+			while (time(NULL) == t1)  {}
+			t1 = time(NULL) + 3;
+			char Str[30] = {0};
+			CubicleSoft::PackedOrderedHash<std::uint32_t> TempHash(3);
+			while (t1 > time(NULL))
+			{
+				((std::uint32_t *)Str)[5] = x;
+				TempHash.Set(Str, 30, x);
+
+				x++;
+			}
+
+			CubicleSoft::Convert::Int::ToString(NumNodes, 100, (std::uint64_t)(x / 3), ',');
+			printf("\n\tString keys, djb2 hash keys - %s nodes added/sec", NumNodes);
+		}
+
+		{
+			// Integer keys, SipHash hash keys.
+			x = 0;
+			time_t t1 = time(NULL);
+			while (time(NULL) == t1)  {}
+			t1 = time(NULL) + 3;
+			CubicleSoft::PackedOrderedHash<std::uint32_t> TempHash(3, 0, 0);
+			while (t1 > time(NULL))
+			{
+				TempHash.Set(x, x);
+
+				x++;
+			}
+
+			CubicleSoft::Convert::Int::ToString(NumNodes, 100, (std::uint64_t)(x / 3), ',');
+			printf("\n\tInteger keys, SipHash hash keys - %s nodes added/sec", NumNodes);
+		}
+
+		{
+			// String keys (raw bytes of the integer implanted into the hash), SipHash hash keys.
+			x = 0;
+			time_t t1 = time(NULL);
+			while (time(NULL) == t1)  {}
+			t1 = time(NULL) + 3;
+			char Str[30] = {0};
+			CubicleSoft::PackedOrderedHash<std::uint32_t> TempHash(3, 0, 0);
+			while (t1 > time(NULL))
+			{
+				((std::uint32_t *)Str)[5] = x;
+				TempHash.Set(Str, 30, x);
+
+				x++;
+			}
+
+			CubicleSoft::Convert::Int::ToString(NumNodes, 100, (std::uint64_t)(x / 3), ',');
+			printf("\n\tString keys, SipHash hash keys - %s nodes added/sec", NumNodes);
+		}
+
+		{
+			// Integer keys, djb2 hash keys, find performance.
+			CubicleSoft::PackedOrderedHash<std::uint32_t> TempHash(3);
+			CubicleSoft::PackedOrderedHashNode<std::uint32_t> *Node;
+			for (x = 0; x < 1000000; x++)  TempHash.Set(x, x);
+
+			x = 0;
+			time_t t1 = time(NULL);
+			while (time(NULL) == t1)  {}
+			t1 = time(NULL) + 3;
+			while (t1 > time(NULL))
+			{
+				Node = TempHash.Find(rand() % 1000000);
+				if (Node == NULL)  printf("Unable to find node!\n");
+
+				x++;
+			}
+
+			CubicleSoft::Convert::Int::ToString(NumNodes, 100, (std::uint64_t)(x / 3), ',');
+			printf("\n\tInteger keys, find performance (1 million nodes) - %s nodes/sec", NumNodes);
+		}
+
+		{
+			// String keys, djb2 hash keys, find performance.
+			CubicleSoft::PackedOrderedHash<std::uint32_t> TempHash(3);
+			CubicleSoft::PackedOrderedHashNode<std::uint32_t> *Node;
+			char Str[30] = {0};
+			for (x = 0; x < 1000000; x++)
+			{
+				((std::uint32_t *)Str)[5] = x;
+				TempHash.Set(Str, 30, x);
+			}
+
+			x = 0;
+			time_t t1 = time(NULL);
+			while (time(NULL) == t1)  {}
+			t1 = time(NULL) + 3;
+			while (t1 > time(NULL))
+			{
+				((std::uint32_t *)Str)[5] = rand() % 1000000;
+				Node = TempHash.Find(Str, 30);
+				if (Node == NULL)  printf("Unable to find node!\n");
 
 				x++;
 			}
@@ -1957,3 +2188,6 @@ int main(int argc, char **argv)
 
 	return 0;
 }
+
+#pragma optimize("", on)
+#pragma GCC pop_options
