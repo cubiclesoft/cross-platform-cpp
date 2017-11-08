@@ -17,8 +17,8 @@ namespace CubicleSoft
 	{
 		std::uint32_t Result = (std::uint32_t)InitVal;
 		std::uint32_t y;
-		const std::uint8_t *StrEnd = Str + Size - (Size % sizeof(std::uint32_t));
 		const size_t NumLeft = Size & 3;
+		const std::uint8_t *StrEnd = Str + Size - NumLeft;
 
 		while (Str != StrEnd)
 		{
@@ -61,8 +61,8 @@ namespace CubicleSoft
 		std::uint64_t Result;
 		std::uint64_t y;
 		size_t x;
-		const std::uint8_t *StrEnd = Str + Size - (Size % sizeof(std::uint64_t));
 		const size_t NumLeft = Size & 7;
+		const std::uint8_t *StrEnd = Str + Size - NumLeft;
 
 		Result = ((std::uint64_t)Size) << 56;
 		v3 ^= Key2;

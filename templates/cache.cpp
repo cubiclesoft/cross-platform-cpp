@@ -26,8 +26,8 @@ namespace CubicleSoft
 	{
 		std::uint32_t Result = 5381;
 		std::uint32_t y;
-		const std::uint8_t *StrEnd = Str + Size - (Size % sizeof(std::uint32_t));
 		const size_t NumLeft = Size & 3;
+		const std::uint8_t *StrEnd = Str + Size - NumLeft;
 
 		while (Str != StrEnd)
 		{
