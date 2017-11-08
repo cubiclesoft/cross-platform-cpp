@@ -183,7 +183,7 @@ public:
 	PackedOrderedHashNode<T> *Set(const std::int64_t IntKey)
 	{
 		size_t Pos;
-		std::uint64_t HashKey = GetHashKey((std::uint8_t *)&IntKey, sizeof(std::int64_t));
+		std::uint64_t HashKey = GetHashKey((const std::uint8_t *)&IntKey, sizeof(std::int64_t));
 		PackedOrderedHashNode<T> *Node = InternalFind(IntKey, Pos, HashKey);
 
 		if (Node != NULL)  return Node;
@@ -222,7 +222,7 @@ public:
 	PackedOrderedHashNode<T> *Set(const char *StrKey, const size_t StrLen)
 	{
 		size_t Pos;
-		std::uint64_t HashKey = GetHashKey((std::uint8_t *)StrKey, StrLen);
+		std::uint64_t HashKey = GetHashKey((const std::uint8_t *)StrKey, StrLen);
 		PackedOrderedHashNode<T> *Node = InternalFind(StrKey, StrLen, Pos, HashKey);
 
 		if (Node != NULL)  return Node;
@@ -317,7 +317,7 @@ public:
 	// Finds the node in the array via the hash.
 	inline PackedOrderedHashNode<T> *Find(const std::int64_t IntKey, size_t &Pos)
 	{
-		return InternalFind(IntKey, Pos, GetHashKey((std::uint8_t *)&IntKey, sizeof(std::int64_t)));
+		return InternalFind(IntKey, Pos, GetHashKey((const std::uint8_t *)&IntKey, sizeof(std::int64_t)));
 	}
 
 	// Finds the node in the array via the hash.
@@ -331,7 +331,7 @@ public:
 	// Finds the node in the array via the hash.
 	inline PackedOrderedHashNode<T> *Find(const char *StrKey, const size_t StrLen, size_t &Pos)
 	{
-		return InternalFind(StrKey, StrLen, Pos, GetHashKey((std::uint8_t *)StrKey, StrLen));
+		return InternalFind(StrKey, StrLen, Pos, GetHashKey((const std::uint8_t *)StrKey, StrLen));
 	}
 
 	// Iterates over the array, skipping unset nodes.  Initialize the input Pos to GetNextPos() to start at the beginning.
@@ -495,7 +495,7 @@ private:
 					// Raw copy node.
 					memcpy(Node2, Node, sizeof(PackedOrderedHashNode<T>));
 
-					HashKey = (Node2->StrKey != NULL ? (std::uint64_t)Node2->IntKey : GetHashKey((std::uint8_t *)&Node2->IntKey, sizeof(std::int64_t)));
+					HashKey = (Node2->StrKey != NULL ? (std::uint64_t)Node2->IntKey : GetHashKey((const std::uint8_t *)&Node2->IntKey, sizeof(std::int64_t)));
 
 					// Attach the node to the start of the hash list.
 					HashPos = (std::uint32_t)HashKey & Mask2;

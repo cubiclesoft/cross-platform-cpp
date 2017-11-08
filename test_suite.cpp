@@ -650,7 +650,7 @@ int Test_Templates_OrderedHash(FILE *Testfp)
 	// Test order.
 	x = true;
 	Node = TestHash.FirstList();
-	for (x2 = 0; x2 < 100 && x; x2++)  x = (TestHash.Find(x2) != NULL);
+	for (x2 = 0; x2 < 100 && x; x2++)  x = ((Node = Node->NextList()) != NULL);
 	if (x)
 	{
 		x = (Node->GetStrKey() != NULL && Node->GetIntKey() == 1 && Node->Value == x2);
@@ -682,6 +682,64 @@ int Test_Templates_OrderedHash(FILE *Testfp)
 	}
 
 	x = (TestHash.GetListSize() == 102);
+	TEST_COMPARE(x, 1);
+
+	TEST_SUMMARY();
+
+	TEST_RETURN();
+}
+
+int Test_Templates_PackedOrderedHash(FILE *Testfp)
+{
+	TEST_START(Test_Templates_PackedOrderedHash);
+
+	CubicleSoft::PackedOrderedHash<int> TestHash(32);
+	CubicleSoft::PackedOrderedHashNode<int> *Node;
+	bool x;
+	int x2;
+
+	for (x2 = 0; x2 < 100; x2++)  TestHash.Set(x2, x2);
+	TestHash.Set("", 1, x2++);
+	TestHash.Set("test", 5, x2++);
+
+	x = (TestHash.GetSize() == 102);
+	TEST_COMPARE(x, 1);
+
+	// Test existence.
+	x = true;
+	for (x2 = 0; x2 < 100 && x; x2++)  x = (TestHash.Find(x2) != NULL);
+	if (x)  x = (TestHash.Find("", 1) != NULL);
+	if (x)  x = (TestHash.Find("test", 5) != NULL);
+	TEST_COMPARE(x, 1);
+
+	// Test order.
+	x = true;
+	size_t Pos = TestHash.GetNextPos();
+	for (x2 = 0; x2 < 100 && x; x2++)
+	{
+		Node = TestHash.Next(Pos);
+		x = (Node != NULL && Node->GetStrKey() == NULL && Node->GetIntKey() == x2 && Node->Value == x2);
+	}
+	if (x)
+	{
+		Node = TestHash.Next(Pos);
+		x = (Node != NULL && Node->GetStrKey() != NULL && Node->GetStrLen() == 1 && Node->Value == x2);
+		x2++;
+	}
+	if (x)
+	{
+		Node = TestHash.Next(Pos);
+		x = (Node != NULL && Node->GetStrKey() != NULL && Node->GetStrLen() == 5 && Node->Value == x2);
+		x2++;
+	}
+	TEST_COMPARE(x, 1);
+
+	// Test unset.
+	x = true;
+	for (x2 = 0; x2 < 100 && x; x2++)  x = TestHash.Unset(x2);
+	TEST_COMPARE(x, 1);
+
+	x = (TestHash.GetSize() == 2);
 	TEST_COMPARE(x, 1);
 
 	TEST_SUMMARY();
@@ -976,64 +1034,6 @@ int Test_Templates_FastFindReplace(FILE *Testfp)
 	y = TempBuffer2.GetMaxSize();
 	x = (CubicleSoft::FastReplace<char>::StaticReplaceAll(TempBuffer2.GetStr(), y, TempBuffer.GetStr(), TempBuffer.GetSize(), "@REALLYLONGTOKEN@", (size_t)-1, "long replacement string", (size_t)-1) == 1);
 	TempBuffer2.SetSize(y);
-	TEST_COMPARE(x, 1);
-
-	TEST_SUMMARY();
-
-	TEST_RETURN();
-}
-
-int Test_Templates_PackedOrderedHash(FILE *Testfp)
-{
-	TEST_START(Test_Templates_PackedOrderedHash);
-
-	CubicleSoft::PackedOrderedHash<int> TestHash(32);
-	CubicleSoft::PackedOrderedHashNode<int> *Node, *Nodes = NULL;
-	bool x;
-	int x2;
-
-	for (x2 = 0; x2 < 100; x2++)  TestHash.Set(x2, x2);
-	TestHash.Set("", 1, x2++);
-	TestHash.Set("test", 5, x2++);
-
-	x = (TestHash.GetSize() == 102);
-	TEST_COMPARE(x, 1);
-
-	// Test existence.
-	x = true;
-	for (x2 = 0; x2 < 100 && x; x2++)  x = (TestHash.Find(x2) != NULL);
-	if (x)  x = (TestHash.Find("", 1) != NULL);
-	if (x)  x = (TestHash.Find("test", 5) != NULL);
-	TEST_COMPARE(x, 1);
-
-	// Test order.
-	x = true;
-	size_t Pos = TestHash.GetNextPos();
-	for (x2 = 0; x2 < 100 && x; x2++)
-	{
-		Node = TestHash.Next(Pos);
-		x = (Node != NULL && Node->GetStrKey() == NULL && Node->GetIntKey() == x2 && Node->Value == x2);
-	}
-	if (x)
-	{
-		Node = TestHash.Next(Pos);
-		x = (Node != NULL && Node->GetStrKey() != NULL && Node->GetStrLen() == 1 && Node->Value == x2);
-		x2++;
-	}
-	if (x)
-	{
-		Node = TestHash.Next(Pos);
-		x = (Node != NULL && Node->GetStrKey() != NULL && Node->GetStrLen() == 5 && Node->Value == x2);
-		x2++;
-	}
-	TEST_COMPARE(x, 1);
-
-	// Test unset.
-	x = true;
-	for (x2 = 0; x2 < 100 && x; x2++)  x = TestHash.Unset(x2);
-	TEST_COMPARE(x, 1);
-
-	x = (TestHash.GetSize() == 2);
 	TEST_COMPARE(x, 1);
 
 	TEST_SUMMARY();
