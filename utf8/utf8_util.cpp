@@ -229,7 +229,7 @@ namespace CubicleSoft
 					{
 						TempCP -= 0x010000;
 						DestData2[DestDataSize++] = (uint16_t)(((TempCP >> 10) & 0x03FF) + 0xD800);
-						DestData2[DestDataSize++] = (uint16_t)(((TempCP & 0x03FF) >> 10) + 0xD800);
+						DestData2[DestDataSize++] = (uint16_t)((TempCP & 0x03FF) + 0xDC00);
 					}
 				}
 				else if (DestData2 == NULL)  DestDataSize++;
