@@ -1341,10 +1341,16 @@ int Test_UTF8_Dir(FILE *Testfp)
 	x = CubicleSoft::UTF8::Dir::Getcwd(Filename, 4096);
 	TEST_COMPARE(x, 1);
 
+	x = CubicleSoft::UTF8::File::Exists("test/");
+	TEST_COMPARE(x, 0);
+
 	x = CubicleSoft::UTF8::Dir::Mkdir("test/awesome/path", 0777, false);
 	TEST_COMPARE(x, 0);
 
 	x = CubicleSoft::UTF8::Dir::Mkdir("test/awesome/path", 0777, true);
+	TEST_COMPARE(x, 1);
+
+	x = CubicleSoft::UTF8::File::Exists("test/");
 	TEST_COMPARE(x, 1);
 
 	x = TestDir.Open("test");

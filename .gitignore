@@ -2,3 +2,4 @@ cross_platform/*
 *.exe
 *.obj
 test_suite
+samples/*
