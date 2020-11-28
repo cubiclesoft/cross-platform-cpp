@@ -3,6 +3,8 @@ Cross-platform C++ Snippet Library
 
 This is a cross-platform C++ snippet library.  Most C++ libraries (wxWidgets, Qt, Poco, etc.) attempt to be the "be all, end all" solution for the project you are building.  Those libraries are great for large projects but have the unfortunate tendency to introduce heavy dependencies for little projects, especially when writing third-party libraries for the general user.
 
+[![Donate](https://cubiclesoft.com/res/donate-shield.png)](https://cubiclesoft.com/donate/) [![Discord](https://img.shields.io/discord/777282089980526602?label=chat&logo=discord)](https://cubiclesoft.com/product-support/github/)
+
 This Library is Different
 -------------------------
 
