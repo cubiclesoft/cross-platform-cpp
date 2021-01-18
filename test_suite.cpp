@@ -36,6 +36,7 @@
 #include "utf8/utf8_appinfo.h"
 #include "utf8/utf8_file_dir.h"
 #include "utf8/utf8_mixed_var.h"
+#include "json/json_serializer.h"
 //#include "network/network_init.h"
 //#include "network/network_async_helper.h"
 
@@ -61,6 +62,7 @@ CubicleSoft::FastReplace<char> GxFastReplace;
 CubicleSoft::UTF8::File GxUTF8File;
 CubicleSoft::UTF8::Dir GxUTF8Dir;
 CubicleSoft::UTF8::UTF8MixedVar<char[8192]> GxUTF8MixedVar;
+CubicleSoft::JSON::Serializer GxJSONSerializer;
 //CubicleSoft::Network::Init GxNetworkInit;
 //CubicleSoft::Network::AsyncHelper GxAsyncHelper;
 //CubicleSoft::Network::Server GxServer;
@@ -1379,6 +1381,92 @@ int Test_UTF8_Dir(FILE *Testfp)
 	TEST_RETURN();
 }
 
+int Test_JSON_Serialize(FILE *Testfp)
+{
+	TEST_START(Test_JSON_Serialize);
+
+	char Buffer[4096];
+	CubicleSoft::JSON::Serializer TestSerializer;
+	bool x;
+
+	TestSerializer.SetBuffer((std::uint8_t *)Buffer, sizeof(Buffer));
+	x = (TestSerializer.GetBufferSize() == 4095);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.StartObject("test");
+	TEST_COMPARE(x, 0);
+
+	x = TestSerializer.EndObject();
+	TEST_COMPARE(x, 0);
+
+	x = TestSerializer.StartObject();
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendBool(true);
+	TEST_COMPARE(x, 0);
+
+	x = TestSerializer.AppendBool("success", true);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.StartArray();
+	TEST_COMPARE(x, 0);
+
+	x = TestSerializer.EndArray();
+	TEST_COMPARE(x, 0);
+
+	x = TestSerializer.StartArray("types");
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendNull("test");
+	TEST_COMPARE(x, 0);
+
+	x = TestSerializer.AppendNull();
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendBool(true);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendBool(false);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendInt(-123456789012);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendUInt(123456789012);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendDouble(1234567890.1234567890, 10);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendStr("TEST");
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendStr("TEST", 4);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.EndArray();
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.EndObject();
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.StartObject();
+	TEST_COMPARE(x, 0);
+
+	x = TestSerializer.EndObject();
+	TEST_COMPARE(x, 0);
+
+	x = TestSerializer.Finish();
+	TEST_COMPARE(x, 1);
+
+	printf("\tSample JSON:\n");
+	printf("\t%s\n", Buffer);
+
+	TEST_SUMMARY();
+
+	TEST_RETURN();
+}
+
 #pragma optimize("", off)
 #pragma GCC push_options
 #pragma GCC optimize("O0")
@@ -1410,6 +1498,7 @@ int main(int argc, char **argv)
 		Test_UTF8_AppInfo(stdout, argv[0]);
 		Test_UTF8_File(stdout);
 		Test_UTF8_Dir(stdout);
+		Test_JSON_Serialize(stdout);
 	}
 	else if (!strcmp("loop", argv[1]))
 	{

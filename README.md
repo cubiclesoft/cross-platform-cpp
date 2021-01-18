@@ -33,6 +33,7 @@ Features
 * Minimalist Unicode conversion support.  Just enough useful logic without having to drag in a multi-MB Unicode support library.
 * Cross-platform, UTF-8 file and directory manipulation classes.
 * Cross-platform, UTF-8 storage location functions (e.g. a user's home folder).
+* Cross-platform, static buffer JSON serializer class.
 * FastFind and FastReplace templates.  Works on any binary data.  FastFind probably outperforms std::search (See Notes).  FastReplace supports alternate allocators (e.g. Sync::TLS) and comparison functions (e.g. case-insensitive comparison).
 * Variable data storage via StaticMixedVar, UTF8::UTF8MixedVar, and Sync::TLS::MixedVar.  For when you want lightweight dynamic typing with basic string support or just want to avoid std::string.
 * Has a liberal open source license.  MIT or LGPL, your choice.
