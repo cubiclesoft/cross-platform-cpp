@@ -1435,7 +1435,41 @@ int Test_JSON_Serialize(FILE *Testfp)
 	x = TestSerializer.AppendUInt(123456789012);
 	TEST_COMPARE(x, 1);
 
-	x = TestSerializer.AppendDouble(1234567890.1234567890, 10);
+	x = TestSerializer.AppendUInt(9223372036854775807);
+	TEST_COMPARE(x, 1);
+
+	// IEEE floating point is tricky so there are quite a few examples here.
+	x = TestSerializer.AppendDouble(1234567890.1234567890);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendDouble(12345678901234567890.1234567890);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendDouble(1e100);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendDouble(0.0);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendDouble(-0.0);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendDouble(1.2345);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendDouble(-1.2345);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendDouble(5e-324);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendDouble(2.225073858507201e-308);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendDouble(2.2250738585072014e-308);
+	TEST_COMPARE(x, 1);
+
+	x = TestSerializer.AppendDouble(1.7976931348623157e308);
 	TEST_COMPARE(x, 1);
 
 	x = TestSerializer.AppendStr("TEST");

@@ -146,10 +146,10 @@ namespace CubicleSoft
 		{
 			char TempBuffer[100];
 #if (defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)) && defined(_MSC_VER) && _MSC_VER < 1900
-			_snprintf_s(TempBuffer, sizeof(TempBuffer), _TRUNCATE, "%1.*f", Precision, Val);
+			_snprintf_s(TempBuffer, sizeof(TempBuffer), _TRUNCATE, "%1.*g", Precision, Val);
 			TempBuffer[sizeof(TempBuffer) - 1] = '\0';
 #else
-			snprintf(TempBuffer, sizeof(TempBuffer), "%1.*f", Precision, Val);
+			snprintf(TempBuffer, sizeof(TempBuffer), "%1.*g", Precision, Val);
 #endif
 
 			size_t x = strlen(TempBuffer);

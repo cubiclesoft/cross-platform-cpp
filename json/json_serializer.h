@@ -56,14 +56,14 @@ namespace CubicleSoft
 			bool AppendBool(const char *Key, const bool Val);
 			bool AppendInt(const char *Key, const std::int64_t Val);
 			bool AppendUInt(const char *Key, const std::uint64_t Val);
-			bool AppendDouble(const char *Key, const double Val, size_t Precision = 6);
+			bool AppendDouble(const char *Key, const double Val, size_t Precision = 100);
 			bool AppendStr(const char *Key, const char *Val);
 			bool AppendStr(const char *Key, const char *Val, size_t Size);
 
 			inline bool AppendBool(const bool Val)  { return AppendBool(NULL, Val); }
 			inline bool AppendInt(const std::int64_t Val)  { return AppendInt(NULL, Val); }
 			inline bool AppendUInt(const std::uint64_t Val)  { return AppendUInt(NULL, Val); }
-			inline bool AppendDouble(const double Val, size_t Precision = 6)  { return AppendDouble(NULL, Val, Precision); }
+			inline bool AppendDouble(const double Val, size_t Precision = 16)  { return AppendDouble(NULL, Val, Precision); }
 			inline bool AppendStr(const char *Val)  { return AppendStr(NULL, Val); }
 			inline bool AppendStr(const char *Val, size_t Size)  { return AppendStr(NULL, Val, Size); }
 
