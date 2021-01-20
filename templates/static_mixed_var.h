@@ -1,5 +1,5 @@
 // A mixed, flexible variable data type (plain ol' data - POD) with all-public data access.
-// (C) 2016 CubicleSoft.  All Rights Reserved.
+// (C) 2021 CubicleSoft.  All Rights Reserved.
 
 #ifndef CUBICLESOFT_STATIC_MIXED_VAR
 #define CUBICLESOFT_STATIC_MIXED_VAR
@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <cstring>
+#include <cstdio>
 
 namespace CubicleSoft
 {
@@ -102,25 +103,25 @@ namespace CubicleSoft
 			return sizeof(MxStr);
 		}
 
-		inline void SetBool(bool newbool)
+		inline void SetBool(const bool newbool)
 		{
 			MxMode = MV_Bool;
 			MxInt = (int)newbool;
 		}
 
-		inline void SetInt(std::int64_t newint)
+		inline void SetInt(const std::int64_t newint)
 		{
 			MxMode = MV_Int;
 			MxInt = newint;
 		}
 
-		inline void SetUInt(std::uint64_t newint)
+		inline void SetUInt(const std::uint64_t newint)
 		{
 			MxMode = MV_UInt;
 			MxInt = (std::int64_t)newint;
 		}
 
-		inline void SetDouble(double newdouble)
+		inline void SetDouble(const double newdouble)
 		{
 			MxMode = MV_Double;
 			MxDouble = newdouble;
@@ -149,7 +150,7 @@ namespace CubicleSoft
 			MxStr[MxStrPos] = '\0';
 		}
 
-		// Only prepends if there is enough space.
+		// Prepend functions only prepend if there is enough space.
 		void PrependStr(const char *str)
 		{
 			size_t y = strlen(str);
@@ -161,7 +162,6 @@ namespace CubicleSoft
 			}
 		}
 
-		// Only prepends if there is enough space.
 		void PrependData(const char *str, size_t size)
 		{
 			if (MxStrPos + size < sizeof(MxStr) - 1)
@@ -170,6 +170,31 @@ namespace CubicleSoft
 				memcpy(MxStr, str, size);
 				MxStrPos += size;
 			}
+		}
+
+		void PrependInt(const std::int64_t val, size_t radix = 10)
+		{
+			char tempbuffer[44];
+			if (IntToString(tempbuffer, sizeof(tempbuffer), val, radix))  PrependStr(tempbuffer);
+		}
+
+		void PrependUInt(const std::uint64_t val, size_t radix = 10)
+		{
+			char tempbuffer[44];
+			if (IntToString(tempbuffer, sizeof(tempbuffer), val, radix))  PrependStr(tempbuffer);
+		}
+
+		void PrependDouble(const double val, const size_t precision = 16)
+		{
+			char tempbuffer[100];
+#if (defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)) && defined(_MSC_VER) && _MSC_VER < 1900
+			_snprintf_s(tempbuffer, sizeof(tempbuffer), _TRUNCATE, "%1.*g", precision, val);
+			tempbuffer[sizeof(tempbuffer) - 1] = '\0';
+#else
+			snprintf(tempbuffer, sizeof(tempbuffer), "%1.*g", precision, val);
+#endif
+
+			PrependStr(tempbuffer);
 		}
 
 		void AppendStr(const char *str)
@@ -191,7 +216,32 @@ namespace CubicleSoft
 			MxStr[MxStrPos] = '\0';
 		}
 
-		inline void AppendChar(char chr)
+		void AppendInt(const std::int64_t val, size_t radix = 10)
+		{
+			char tempbuffer[44];
+			if (IntToString(tempbuffer, sizeof(tempbuffer), val, radix))  AppendStr(tempbuffer);
+		}
+
+		void AppendUInt(const std::uint64_t val, size_t radix = 10)
+		{
+			char tempbuffer[44];
+			if (IntToString(tempbuffer, sizeof(tempbuffer), val, radix))  AppendStr(tempbuffer);
+		}
+
+		void AppendDouble(const double val, const size_t precision = 16)
+		{
+			char tempbuffer[100];
+#if (defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)) && defined(_MSC_VER) && _MSC_VER < 1900
+			_snprintf_s(tempbuffer, sizeof(tempbuffer), _TRUNCATE, "%1.*g", precision, val);
+			tempbuffer[sizeof(tempbuffer) - 1] = '\0';
+#else
+			snprintf(tempbuffer, sizeof(tempbuffer), "%1.*g", precision, val);
+#endif
+
+			AppendStr(tempbuffer);
+		}
+
+		inline void AppendChar(const char chr)
 		{
 			if (MxStrPos < sizeof(MxStr) - 1)
 			{
@@ -200,7 +250,7 @@ namespace CubicleSoft
 			}
 		}
 
-		inline void AppendMissingChar(char chr)
+		inline void AppendMissingChar(const char chr)
 		{
 			if ((!MxStrPos || MxStr[MxStrPos - 1] != chr) && MxStrPos < sizeof(MxStr) - 1)
 			{
@@ -209,7 +259,7 @@ namespace CubicleSoft
 			}
 		}
 
-		inline bool RemoveTrailingChar(char chr)
+		inline bool RemoveTrailingChar(const char chr)
 		{
 			if (!MxStrPos || MxStr[MxStrPos - 1] != chr)  return false;
 
@@ -218,13 +268,49 @@ namespace CubicleSoft
 			return true;
 		}
 
-		inline void SetSize(size_t size)
+		inline void SetSize(const size_t size)
 		{
 			if (size < sizeof(MxStr))
 			{
 				MxStrPos = size;
 				MxStr[MxStrPos] = '\0';
 			}
+		}
+
+		// Swiped and slightly modified from Int::ToString().
+		bool IntToString(char *Result, size_t Size, std::uint64_t Num, size_t Radix = 10)
+		{
+			if (Size < 2)  return false;
+
+			size_t x = Size, z;
+
+			Result[--x] = '\0';
+			if (!Num)  Result[--x] = '0';
+			else
+			{
+				while (Num && x)
+				{
+					z = Num % Radix;
+					Result[--x] = (char)(z > 9 ? z - 10 + 'A' : z + '0');
+					Num /= Radix;
+				}
+
+				if (Num)  return false;
+			}
+
+			memmove(Result, Result + x, Size - x);
+
+			return true;
+		}
+
+		bool IntToString(char *Result, size_t Size, std::int64_t Num, size_t Radix = 10)
+		{
+			if (Num >= 0)  return IntToString(Result, Size, (std::uint64_t)Num, Radix);
+
+			if (Size < 2)  return false;
+			Result[0] = '-';
+
+			return IntToString(Result + 1, Size - 1, (std::uint64_t)-Num, Radix);
 		}
 	};
 }

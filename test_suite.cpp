@@ -1,5 +1,5 @@
 // Cross-platform test suite.
-// (C) 2015 CubicleSoft.  All Rights Reserved.
+// (C) 2021 CubicleSoft.  All Rights Reserved.
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <cstdio>
@@ -959,12 +959,18 @@ int Test_Templates_StaticMixedVar(FILE *Testfp)
 	x = (TestMixedVar.GetSize() == 35);
 	TEST_COMPARE(x, 1);
 
-	TestMixedVar.SetSize(26);
+	TestMixedVar.PrependInt(-15);
+	TestMixedVar.PrependUInt(15);
+	TestMixedVar.AppendInt(-15);
+	TestMixedVar.AppendUInt(15);
+	TestMixedVar.AppendDouble(15e100);
 
-	x = (TestMixedVar.GetSize() == 26);
+	TestMixedVar.SetSize(31);
+
+	x = (TestMixedVar.GetSize() == 31);
 	TEST_COMPARE(x, 1);
 
-	x = (memcmp(TestMixedVar.GetStr(), "test\0testtesttest\0testtest", 26) == 0);
+	x = (memcmp(TestMixedVar.GetStr(), "15-15test\0testtesttest\0testtest", 31) == 0);
 	TEST_COMPARE(x, 1);
 
 	TEST_SUMMARY();
