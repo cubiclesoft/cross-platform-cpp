@@ -1,5 +1,5 @@
 // Cross-platform integer conversion functions.
-// (C) 2013 CubicleSoft.  All Rights Reserved.
+// (C) 2021 CubicleSoft.  All Rights Reserved.
 
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -11,11 +11,11 @@ namespace CubicleSoft
 {
 	namespace Convert
 	{
-		bool Int::ToString(char *Result, size_t Size, std::uint64_t Num, char Separator)
+		bool Int::ToString(char *Result, size_t Size, std::uint64_t Num, char Separator, size_t Radix)
 		{
-			if (Size < 2)  return false;
+			if (Size < 2 || Radix < 2 || Radix > 36)  return false;
 
-			size_t x = Size, y = 0;
+			size_t x = Size, y = 0, z;
 
 			Result[--x] = '\0';
 			if (!Num)  Result[--x] = '0';
@@ -29,8 +29,9 @@ namespace CubicleSoft
 						if (!x)  return false;
 					}
 
-					Result[--x] = (char)(Num % 10) + '0';
-					Num /= 10;
+					z = Num % Radix;
+					Result[--x] = (char)(z > 9 ? z - 10 + 'A' : z + '0');
+					Num /= Radix;
 					y++;
 				}
 
@@ -42,14 +43,14 @@ namespace CubicleSoft
 			return true;
 		}
 
-		bool Int::ToString(char *Result, size_t Size, std::int64_t Num, char Separator)
+		bool Int::ToString(char *Result, size_t Size, std::int64_t Num, char Separator, size_t Radix)
 		{
-			if (Num >= 0)  return ToString(Result, Size, (std::uint64_t)Num, Separator);
+			if (Num >= 0)  return ToString(Result, Size, (std::uint64_t)Num, Separator, Radix);
 
 			if (Size < 2)  return false;
 			Result[0] = '-';
 
-			return ToString(Result + 1, Size - 1, (std::uint64_t)-Num, Separator);
+			return ToString(Result + 1, Size - 1, (std::uint64_t)-Num, Separator, Radix);
 		}
 
 		bool Int::ToFilesizeString(char *Result, size_t Size, std::uint64_t Num, size_t NumFrac, char NumSeparator, char DecimalSeparator, char UnitSeparator, const char *BytesUnit)
