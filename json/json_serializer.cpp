@@ -163,6 +163,8 @@ namespace CubicleSoft
 
 		bool Serializer::AppendStr(const char *Key, const char *Val)
 		{
+			if (Val == NULL)  return false;
+
 			size_t x = CalculateStrSize(Val, false);
 			if (!InternalAppendNextPrefix(Key, x))  return false;
 
@@ -173,6 +175,8 @@ namespace CubicleSoft
 
 		bool Serializer::AppendStr(const char *Key, const char *Val, const size_t Size)
 		{
+			if (Val == NULL)  return false;
+
 			size_t x = CalculateStrSize(Val, Size, false);
 			if (!InternalAppendNextPrefix(Key, x))  return false;
 
@@ -183,7 +187,7 @@ namespace CubicleSoft
 
 		bool Serializer::Append(const char *Val, size_t Size)
 		{
-			if (MxBufferPos + Size > MxBufferSize)  return false;
+			if (MxBufferPos + Size > MxBufferSize || Val == NULL)  return false;
 
 			while (Size)
 			{
