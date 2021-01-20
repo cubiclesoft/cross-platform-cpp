@@ -142,7 +142,7 @@ namespace CubicleSoft
 			return true;
 		}
 
-		bool Serializer::AppendDouble(const char *Key, const double Val, size_t Precision)
+		bool Serializer::AppendDouble(const char *Key, const double Val, const size_t Precision)
 		{
 			char TempBuffer[100];
 #if (defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)) && defined(_MSC_VER) && _MSC_VER < 1900
@@ -171,7 +171,7 @@ namespace CubicleSoft
 			return true;
 		}
 
-		bool Serializer::AppendStr(const char *Key, const char *Val, size_t Size)
+		bool Serializer::AppendStr(const char *Key, const char *Val, const size_t Size)
 		{
 			size_t x = CalculateStrSize(Val, Size, false);
 			if (!InternalAppendNextPrefix(Key, x))  return false;
