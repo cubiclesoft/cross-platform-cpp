@@ -1,5 +1,5 @@
 // Adds UTF8 support to the MixedVar template.
-// (C) 2016 CubicleSoft.  All Rights Reserved.
+// (C) 2021 CubicleSoft.  All Rights Reserved.
 
 #ifndef CUBICLESOFT_UTF8_MIXED_VAR
 #define CUBICLESOFT_UTF8_MIXED_VAR
@@ -34,6 +34,11 @@ namespace CubicleSoft
 				Util::ConvertToUTF8(src, srcsize, sizeof(WCHAR), (std::uint8_t *)this->MxStr, this->MxStrPos);
 				if (this->MxStrPos == sizeof(this->MxStr) || (this->MxStrPos && this->MxStr[this->MxStrPos - 1] == '\0'))  this->MxStrPos--;
 				this->MxStr[this->MxStrPos] = '\0';
+			}
+
+			inline void SetUTF8(const WCHAR *src)
+			{
+				SetUTF8(src, wcslen(src));
 			}
 
 			void ConvertFromUTF8(WCHAR *DestData, size_t &DestDataSize)
