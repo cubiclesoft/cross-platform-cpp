@@ -31,6 +31,7 @@
 #include "templates/static_mixed_var.h"
 #include "templates/fast_find_replace.h"
 #include "templates/packed_ordered_hash.h"
+#include "templates/shared_lib.h"
 #include "environment/environment_appinfo.h"
 #include "utf8/utf8_util.h"
 #include "utf8/utf8_appinfo.h"
@@ -1049,6 +1050,60 @@ int Test_Templates_FastFindReplace(FILE *Testfp)
 	TEST_RETURN();
 }
 
+#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+
+CubicleSoft::SharedLib::ModuleUtil GxKernel32("kernel32.dll");
+CubicleSoft::SharedLib::FunctionUtil GxGetCurrentProcessId(GxKernel32, "GetCurrentProcessId");
+
+int Test_Templates_SharedLib(FILE *Testfp)
+{
+	TEST_START(Test_Templates_SharedLib);
+
+	DWORD Result;
+	bool x;
+
+	x = CubicleSoft::SharedLib::Call<DWORD>(GxGetCurrentProcessId, Result);
+	TEST_COMPARE(x, 1);
+
+	x = CubicleSoft::SharedLib::Call<DWORD>(GxGetCurrentProcessId, Result);
+	TEST_COMPARE(x, 1);
+
+	x = CubicleSoft::SharedLib::CallOnce<DWORD>("kernel32.dll", "GetCurrentProcessId", Result);
+	TEST_COMPARE(x, 1);
+
+	TEST_SUMMARY();
+
+	TEST_RETURN();
+}
+
+#else
+
+CubicleSoft::SharedLib::ModuleUtil GxLibm("/lib/x86_64-linux-gnu/libm.so.6");
+CubicleSoft::SharedLib::FunctionUtil GxCosine(GxLibm, "cos");
+
+int Test_Templates_SharedLib(FILE *Testfp)
+{
+	TEST_START(Test_Templates_SharedLib);
+
+	double Result;
+	bool x;
+
+	x = CubicleSoft::SharedLib::Call<double>(GxCosine, Result);
+	TEST_COMPARE(x, 1);
+
+	x = CubicleSoft::SharedLib::Call<double>(GxCosine, Result);
+	TEST_COMPARE(x, 1);
+
+	x = CubicleSoft::SharedLib::CallOnce<double>("/lib/x86_64-linux-gnu/libm.so.6", "cos", Result);
+	TEST_COMPARE(x, 1);
+
+	TEST_SUMMARY();
+
+	TEST_RETURN();
+}
+
+#endif
+
 int Test_Sync_TLS(FILE *Testfp)
 {
 	TEST_START(Test_Sync_TLS);
@@ -1151,12 +1206,18 @@ int Test_Sync_TLSMixedVar(FILE *Testfp)
 		x = (TestMixedVar.GetSize() == 1000);
 		TEST_COMPARE(x, 1);
 
-		TestMixedVar.SetSize(26);
+		TestMixedVar.PrependInt(-15);
+		TestMixedVar.PrependUInt(15);
+		TestMixedVar.AppendInt(-15);
+		TestMixedVar.AppendUInt(15);
+		TestMixedVar.AppendDouble(15e100);
 
-		x = (TestMixedVar.GetSize() == 26);
+		TestMixedVar.SetSize(31);
+
+		x = (TestMixedVar.GetSize() == 31);
 		TEST_COMPARE(x, 1);
 
-		x = (memcmp(TestMixedVar.GetStr(), "test\0testtesttest\0testtest", 26) == 0);
+		x = (memcmp(TestMixedVar.GetStr(), "15-15test\0testtesttest\0testtest", 31) == 0);
 		TEST_COMPARE(x, 1);
 
 		x = (TestMixedVar.ReplaceStr("test", "123") == 6);
@@ -1532,6 +1593,7 @@ int main(int argc, char **argv)
 		Test_Templates_StaticMixedVar(stdout);
 		Test_Templates_UTF8MixedVar(stdout);
 		Test_Templates_FastFindReplace(stdout);
+		Test_Templates_SharedLib(stdout);
 		Test_Sync_TLS(stdout);
 		Test_Sync_TLSMixedVar(stdout);
 		Test_Environment_AppInfo(stdout);
