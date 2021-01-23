@@ -1,7 +1,13 @@
 // Cache.
-// (C) 2013 CubicleSoft.  All Rights Reserved.
+// (C) 2021 CubicleSoft.  All Rights Reserved.
 
 #include "cache.h"
+
+#if (defined(__GNUC__) && __GNUC__ >= 7) || (defined(__clang__) && __clang_major__ >= 12)
+	#define FALL_THROUGH __attribute__ ((fallthrough))
+#else
+	#define FALL_THROUGH ((void)0)
+#endif
 
 namespace CubicleSoft
 {
@@ -41,8 +47,8 @@ namespace CubicleSoft
 
 		switch (NumLeft)
 		{
-			case 3:  Result = ((Result << 5) + Result) ^ ((std::uint32_t)Str[2]);
-			case 2:  Result = ((Result << 5) + Result) ^ ((std::uint32_t)Str[1]);
+			case 3:  Result = ((Result << 5) + Result) ^ ((std::uint32_t)Str[2]);  FALL_THROUGH;
+			case 2:  Result = ((Result << 5) + Result) ^ ((std::uint32_t)Str[1]);  FALL_THROUGH;
 			case 1:  Result = ((Result << 5) + Result) ^ ((std::uint32_t)Str[0]);  break;
 			case 0:  break;
 		}

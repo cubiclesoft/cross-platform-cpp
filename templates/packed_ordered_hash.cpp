@@ -3,6 +3,12 @@
 
 #include "packed_ordered_hash.h"
 
+#if (defined(__GNUC__) && __GNUC__ >= 7) || (defined(__clang__) && __clang_major__ >= 12)
+	#define FALL_THROUGH __attribute__ ((fallthrough))
+#else
+	#define FALL_THROUGH ((void)0)
+#endif
+
 namespace CubicleSoft
 {
 	size_t PackedOrderedHashUtil::GetDJBX33XHashKey(const std::uint8_t *Str, size_t Size, size_t InitVal)
@@ -24,8 +30,8 @@ namespace CubicleSoft
 
 		switch (NumLeft)
 		{
-			case 3:  Result = ((Result << 5) + Result) ^ ((std::uint32_t)Str[2]);
-			case 2:  Result = ((Result << 5) + Result) ^ ((std::uint32_t)Str[1]);
+			case 3:  Result = ((Result << 5) + Result) ^ ((std::uint32_t)Str[2]);  FALL_THROUGH;
+			case 2:  Result = ((Result << 5) + Result) ^ ((std::uint32_t)Str[1]);  FALL_THROUGH;
 			case 1:  Result = ((Result << 5) + Result) ^ ((std::uint32_t)Str[0]);  break;
 			case 0:  break;
 		}
@@ -77,12 +83,12 @@ namespace CubicleSoft
 
 		switch (NumLeft)
 		{
-			case 7:  Result |= ((std::uint64_t)Str[6]) << 48;
-			case 6:  Result |= ((std::uint64_t)Str[5]) << 40;
-			case 5:  Result |= ((std::uint64_t)Str[4]) << 32;
-			case 4:  Result |= ((std::uint64_t)Str[3]) << 24;
-			case 3:  Result |= ((std::uint64_t)Str[2]) << 16;
-			case 2:  Result |= ((std::uint64_t)Str[1]) << 8;
+			case 7:  Result |= ((std::uint64_t)Str[6]) << 48;  FALL_THROUGH;
+			case 6:  Result |= ((std::uint64_t)Str[5]) << 40;  FALL_THROUGH;
+			case 5:  Result |= ((std::uint64_t)Str[4]) << 32;  FALL_THROUGH;
+			case 4:  Result |= ((std::uint64_t)Str[3]) << 24;  FALL_THROUGH;
+			case 3:  Result |= ((std::uint64_t)Str[2]) << 16;  FALL_THROUGH;
+			case 2:  Result |= ((std::uint64_t)Str[1]) << 8;  FALL_THROUGH;
 			case 1:  Result |= ((std::uint64_t)Str[0]);  break;
 			case 0:  break;
 		}
