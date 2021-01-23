@@ -91,7 +91,7 @@ bool CUBICLESOFT_SHARED_LIBRARY_PREFIX_VOID(FunctionUtil &Func, Args... FuncArgs
 	return true;
 }
 
-// Doesn't call FreeLibrary() to avoid issues with multiple uses of the same DLL.
+// Doesn't call dlclose() to avoid issues with multiple uses of the same library.
 template<class RetType, class... Args>
 bool CUBICLESOFT_SHARED_LIBRARY_PREFIX_ONCE(const char *Filename, const char *FuncName, RetType &ReturnVal, Args... FuncArgs)
 {
@@ -109,7 +109,7 @@ bool CUBICLESOFT_SHARED_LIBRARY_PREFIX_ONCE(const char *Filename, const char *Fu
 	return true;
 }
 
-// Doesn't call FreeLibrary() to avoid issues with multiple uses of the same DLL.
+// Doesn't call dlclose() to avoid issues with multiple uses of the same library.
 template<class... Args>
 bool CUBICLESOFT_SHARED_LIBRARY_PREFIX_ONCE_VOID(const char *Filename, const char *FuncName, Args... FuncArgs)
 {
