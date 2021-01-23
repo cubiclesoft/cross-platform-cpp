@@ -191,7 +191,7 @@ namespace CubicleSoft
 			_snprintf_s(tempbuffer, sizeof(tempbuffer), _TRUNCATE, "%1.*g", precision, val);
 			tempbuffer[sizeof(tempbuffer) - 1] = '\0';
 #else
-			snprintf(tempbuffer, sizeof(tempbuffer), "%1.*g", precision, val);
+			snprintf(tempbuffer, sizeof(tempbuffer), "%1.*g", (int)precision, val);
 #endif
 
 			PrependStr(tempbuffer);
@@ -235,7 +235,7 @@ namespace CubicleSoft
 			_snprintf_s(tempbuffer, sizeof(tempbuffer), _TRUNCATE, "%1.*g", precision, val);
 			tempbuffer[sizeof(tempbuffer) - 1] = '\0';
 #else
-			snprintf(tempbuffer, sizeof(tempbuffer), "%1.*g", precision, val);
+			snprintf(tempbuffer, sizeof(tempbuffer), "%1.*g", (int)precision, val);
 #endif
 
 			AppendStr(tempbuffer);
@@ -278,7 +278,7 @@ namespace CubicleSoft
 		}
 
 		// Swiped and slightly modified from Int::ToString().
-		bool IntToString(char *Result, size_t Size, std::uint64_t Num, size_t Radix = 10)
+		static bool IntToString(char *Result, size_t Size, std::uint64_t Num, size_t Radix = 10)
 		{
 			if (Size < 2)  return false;
 
@@ -303,7 +303,7 @@ namespace CubicleSoft
 			return true;
 		}
 
-		bool IntToString(char *Result, size_t Size, std::int64_t Num, size_t Radix = 10)
+		static bool IntToString(char *Result, size_t Size, std::int64_t Num, size_t Radix = 10)
 		{
 			if (Num >= 0)  return IntToString(Result, Size, (std::uint64_t)Num, Radix);
 
