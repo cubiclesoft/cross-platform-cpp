@@ -5,6 +5,7 @@
 #include "../templates/fast_find_replace.h"
 #include <cstdlib>
 #include <cstring>
+#include <cstdio>
 #include <new>
 
 namespace CubicleSoft
@@ -327,6 +328,31 @@ namespace CubicleSoft
 			PrependData(str, strlen(str));
 		}
 
+		void TLS::MixedVar::PrependInt(const std::int64_t val, size_t radix)
+		{
+			char tempbuffer[44];
+			if (IntToString(tempbuffer, sizeof(tempbuffer), val, radix))  PrependStr(tempbuffer);
+		}
+
+		void TLS::MixedVar::PrependUInt(const std::uint64_t val, size_t radix)
+		{
+			char tempbuffer[44];
+			if (IntToString(tempbuffer, sizeof(tempbuffer), val, radix))  PrependStr(tempbuffer);
+		}
+
+		void TLS::MixedVar::PrependDouble(const double val, const size_t precision)
+		{
+			char tempbuffer[100];
+#if (defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)) && defined(_MSC_VER) && _MSC_VER < 1900
+			_snprintf_s(tempbuffer, sizeof(tempbuffer), _TRUNCATE, "%1.*g", precision, val);
+			tempbuffer[sizeof(tempbuffer) - 1] = '\0';
+#else
+			snprintf(tempbuffer, sizeof(tempbuffer), "%1.*g", (int)precision, val);
+#endif
+
+			PrependStr(tempbuffer);
+		}
+
 		void TLS::MixedVar::AppendData(const char *str, size_t size)
 		{
 			MxStr = (char *)MxTLS->realloc(MxStr, MxStrPos + size + 1);
@@ -338,6 +364,31 @@ namespace CubicleSoft
 		void TLS::MixedVar::AppendStr(const char *str)
 		{
 			AppendData(str, strlen(str));
+		}
+
+		void TLS::MixedVar::AppendInt(const std::int64_t val, size_t radix)
+		{
+			char tempbuffer[44];
+			if (IntToString(tempbuffer, sizeof(tempbuffer), val, radix))  AppendStr(tempbuffer);
+		}
+
+		void TLS::MixedVar::AppendUInt(const std::uint64_t val, size_t radix)
+		{
+			char tempbuffer[44];
+			if (IntToString(tempbuffer, sizeof(tempbuffer), val, radix))  AppendStr(tempbuffer);
+		}
+
+		void TLS::MixedVar::AppendDouble(const double val, const size_t precision)
+		{
+			char tempbuffer[100];
+#if (defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)) && defined(_MSC_VER) && _MSC_VER < 1900
+			_snprintf_s(tempbuffer, sizeof(tempbuffer), _TRUNCATE, "%1.*g", precision, val);
+			tempbuffer[sizeof(tempbuffer) - 1] = '\0';
+#else
+			snprintf(tempbuffer, sizeof(tempbuffer), "%1.*g", (int)precision, val);
+#endif
+
+			AppendStr(tempbuffer);
 		}
 
 		void TLS::MixedVar::AppendChar(char chr)
@@ -388,6 +439,42 @@ namespace CubicleSoft
 		size_t TLS::MixedVar::ReplaceStr(const char *src, const char *dest)
 		{
 			return ReplaceData(src, strlen(src), dest, strlen(dest));
+		}
+
+		// Swiped and slightly modified from Int::ToString().
+		bool TLS::MixedVar::IntToString(char *Result, size_t Size, std::uint64_t Num, size_t Radix)
+		{
+			if (Size < 2)  return false;
+
+			size_t x = Size, z;
+
+			Result[--x] = '\0';
+			if (!Num)  Result[--x] = '0';
+			else
+			{
+				while (Num && x)
+				{
+					z = Num % Radix;
+					Result[--x] = (char)(z > 9 ? z - 10 + 'A' : z + '0');
+					Num /= Radix;
+				}
+
+				if (Num)  return false;
+			}
+
+			memmove(Result, Result + x, Size - x);
+
+			return true;
+		}
+
+		bool TLS::MixedVar::IntToString(char *Result, size_t Size, std::int64_t Num, size_t Radix)
+		{
+			if (Num >= 0)  return IntToString(Result, Size, (std::uint64_t)Num, Radix);
+
+			if (Size < 2)  return false;
+			Result[0] = '-';
+
+			return IntToString(Result + 1, Size - 1, (std::uint64_t)-Num, Radix);
 		}
 	}
 }

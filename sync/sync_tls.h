@@ -214,8 +214,14 @@ namespace CubicleSoft
 				void SetStr(const char *str);
 				void PrependData(const char *str, size_t size);
 				void PrependStr(const char *str);
+				void PrependInt(const std::int64_t val, size_t radix = 10);
+				void PrependUInt(const std::uint64_t val, size_t radix = 10);
+				void PrependDouble(const double val, const size_t precision = 16);
 				void AppendData(const char *str, size_t size);
 				void AppendStr(const char *str);
+				void AppendInt(const std::int64_t val, size_t radix = 10);
+				void AppendUInt(const std::uint64_t val, size_t radix = 10);
+				void AppendDouble(const double val, const size_t precision = 16);
 				void AppendChar(char chr);
 				void AppendMissingChar(char chr);
 				void SetSize(size_t pos);
@@ -230,6 +236,9 @@ namespace CubicleSoft
 
 					return true;
 				}
+
+				static bool IntToString(char *Result, size_t Size, std::uint64_t Num, size_t Radix = 10);
+				static bool IntToString(char *Result, size_t Size, std::int64_t Num, size_t Radix = 10);
 			};
 
 		private:
