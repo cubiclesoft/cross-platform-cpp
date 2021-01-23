@@ -28,7 +28,7 @@ namespace CubicleSoft
 				ModeArrayNext
 			};
 
-			Serializer(const bool EscapeSlashes = false, char *KeySplitter = ": ", char *ValSplitter = ", ", size_t MaxDepth = 512);
+			Serializer(const bool EscapeSlashes = false, const char *KeySplitter = ": ", const char *ValSplitter = ", ", size_t MaxDepth = 512);
 
 			void Reset();
 
@@ -81,8 +81,8 @@ namespace CubicleSoft
 			bool InternalAppendNextPrefix(const char *Key, size_t ExtraSpace);
 			void InternalAppendStr(const char *Val);
 			void InternalAppendStr(const char *Val, size_t Size);
-			bool IntToString(char *Result, size_t Size, std::uint64_t Num);
-			bool IntToString(char *Result, size_t Size, std::int64_t Num);
+			static bool IntToString(char *Result, size_t Size, std::uint64_t Num);
+			static bool IntToString(char *Result, size_t Size, std::int64_t Num);
 
 			StaticVector<ModeType> MxModes;
 			size_t MxModeDepth;
@@ -91,7 +91,7 @@ namespace CubicleSoft
 			size_t MxBufferPos, MxBufferSize;
 
 			bool MxEscapeSlashes;
-			char *MxKeySplitter, *MxValSplitter;
+			const char *MxKeySplitter, *MxValSplitter;
 			size_t MxKeySplitterLen, MxValSplitterLen;
 		};
 	}

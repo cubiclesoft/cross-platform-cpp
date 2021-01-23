@@ -10,7 +10,7 @@ namespace CubicleSoft
 {
 	namespace JSON
 	{
-		Serializer::Serializer(const bool EscapeSlashes, char *KeySplitter, char *ValSplitter, size_t MaxDepth)
+		Serializer::Serializer(const bool EscapeSlashes, const char *KeySplitter, const char *ValSplitter, size_t MaxDepth)
 			: MxModes(MaxDepth), MxModeDepth(0), MxBuffer(NULL), MxBufferPos(0), MxBufferSize(0), MxEscapeSlashes(EscapeSlashes), MxKeySplitter(KeySplitter), MxValSplitter(ValSplitter)
 		{
 			MxModes[0] = ModeRootFirst;
@@ -149,7 +149,7 @@ namespace CubicleSoft
 			_snprintf_s(TempBuffer, sizeof(TempBuffer), _TRUNCATE, "%1.*g", Precision, Val);
 			TempBuffer[sizeof(TempBuffer) - 1] = '\0';
 #else
-			snprintf(TempBuffer, sizeof(TempBuffer), "%1.*g", Precision, Val);
+			snprintf(TempBuffer, sizeof(TempBuffer), "%1.*g", (int)Precision, Val);
 #endif
 
 			size_t x = strlen(TempBuffer);
