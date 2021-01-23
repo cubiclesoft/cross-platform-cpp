@@ -175,7 +175,7 @@ private:
 			static FILETIME ConvertUnixMicrosecondTimeToFILETIME(std::uint64_t TempTime);
 			static __time64_t ConvertFILETIMEToUnixTime(FILETIME TempTime);
 			typedef BOOL (APIENTRY *CreateSymbolicLinkWFunc)(LPWSTR, LPWSTR, DWORD);
-			static BOOL SetPrivilege(LPWSTR PrivilegeName, BOOL Enable);
+			static bool SetThreadProcessPrivilege(LPWSTR PrivilegeName, bool Enable);
 
 			HANDLE MxFile;
 #else

@@ -853,10 +853,39 @@ namespace CubicleSoft
 			return true;
 		}
 
+		bool File::SetThreadProcessPrivilege(LPWSTR PrivilegeName, bool Enable)
+		{
+			HANDLE Token;
+			TOKEN_PRIVILEGES TokenPrivs;
+			LUID TempLuid;
+
+			if (!::OpenThreadToken(::GetCurrentThread(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, FALSE, &Token))
+			{
+				if (!::OpenProcessToken(::GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &Token))  return false;
+			}
+
+			if (!::LookupPrivilegeValueW(NULL, PrivilegeName, &TempLuid))  return false;
+
+			TokenPrivs.PrivilegeCount = 1;
+			TokenPrivs.Privileges[0].Luid = TempLuid;
+			TokenPrivs.Privileges[0].Attributes = (Enable ? SE_PRIVILEGE_ENABLED : 0);
+
+			if (!::AdjustTokenPrivileges(Token, FALSE, &TokenPrivs, sizeof(TokenPrivs), NULL, NULL))  return false;
+
+			if (::GetLastError() != ERROR_SUCCESS)  return false;
+
+			::CloseHandle(Token);
+
+			return true;
+		}
+
 		// Unfortunately, creating a symbolic link on Windows requires the SE_CREATE_SYMBOLIC_LINK_NAME privilege.
-		// That privilege is only available to elevated processes.
+		// The privilege is only available to elevated processes.  Run from a command-line:  whoami /priv
 		bool File::Symlink(const char *Src, const char *Dest)
 		{
+			// Enable the privilege in the thread/process token if the user has the privilege but it is disabled.
+			SetThreadProcessPrivilege(L"SeCreateSymbolicLinkPrivilege", true);
+
 			HMODULE TempModule = ::LoadLibraryA("KERNEL32.DLL");
 			if (TempModule == NULL)  return false;
 			CreateSymbolicLinkWFunc CreateSymbolicLinkWPtr = (CreateSymbolicLinkWFunc)::GetProcAddress(TempModule, "CreateSymbolicLinkW");
