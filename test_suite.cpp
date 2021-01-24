@@ -1062,13 +1062,13 @@ int Test_Templates_SharedLib(FILE *Testfp)
 	DWORD Result;
 	bool x;
 
-	x = CubicleSoft::SharedLib::Call<DWORD>(GxGetCurrentProcessId, Result);
+	x = CubicleSoft::SharedLib::Stdcall<DWORD>(GxGetCurrentProcessId, Result);
 	TEST_COMPARE(x, 1);
 
-	x = CubicleSoft::SharedLib::Call<DWORD>(GxGetCurrentProcessId, Result);
+	x = CubicleSoft::SharedLib::Stdcall<DWORD>(GxGetCurrentProcessId, Result);
 	TEST_COMPARE(x, 1);
 
-	x = CubicleSoft::SharedLib::CallOnce<DWORD>("kernel32.dll", "GetCurrentProcessId", Result);
+	x = CubicleSoft::SharedLib::StdcallOnce<DWORD>("kernel32.dll", "GetCurrentProcessId", Result);
 	TEST_COMPARE(x, 1);
 
 	TEST_SUMMARY();
