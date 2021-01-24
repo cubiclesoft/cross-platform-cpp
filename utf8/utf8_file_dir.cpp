@@ -884,7 +884,7 @@ namespace CubicleSoft
 		bool File::Symlink(const char *Src, const char *Dest)
 		{
 			// Enable the privilege in the thread/process token if the user has the privilege but it is disabled.
-			SetThreadProcessPrivilege(L"SeCreateSymbolicLinkPrivilege", true);
+			SetThreadProcessPrivilege((LPWSTR)L"SeCreateSymbolicLinkPrivilege", true);
 
 			HMODULE TempModule = ::LoadLibraryA("KERNEL32.DLL");
 			if (TempModule == NULL)  return false;

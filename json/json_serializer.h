@@ -41,8 +41,8 @@ namespace CubicleSoft
 			inline ModeType GetCurrMode() { return MxModes[MxModeDepth]; }
 
 			inline void SetEscapeSlashes(const bool EscapeSlashes) { MxEscapeSlashes = EscapeSlashes; }
-			inline void SetKeySplitter(char *KeySplitter) { MxKeySplitter = KeySplitter; MxKeySplitterLen = strlen(KeySplitter); }
-			inline void SetValSplitter(char *ValSplitter) { MxValSplitter = ValSplitter; MxValSplitterLen = strlen(ValSplitter); }
+			inline void SetKeySplitter(const char *KeySplitter) { MxKeySplitter = KeySplitter; MxKeySplitterLen = strlen(KeySplitter); }
+			inline void SetValSplitter(const char *ValSplitter) { MxValSplitter = ValSplitter; MxValSplitterLen = strlen(ValSplitter); }
 
 			inline bool IsKeyRequired() { return (MxModes[MxModeDepth] == ModeObjectFirst || MxModes[MxModeDepth] == ModeObjectNext); }
 
