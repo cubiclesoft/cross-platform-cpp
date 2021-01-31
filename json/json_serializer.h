@@ -25,7 +25,8 @@ namespace CubicleSoft
 				ModeObjectFirst,
 				ModeObjectNext,
 				ModeArrayFirst,
-				ModeArrayNext
+				ModeArrayNext,
+				ModeStr
 			};
 
 			Serializer(const bool EscapeSlashes = false, const char *KeySplitter = ": ", const char *ValSplitter = ", ", size_t MaxDepth = 512);
@@ -51,6 +52,9 @@ namespace CubicleSoft
 
 			bool StartArray(const char *Key = NULL);
 			bool EndArray();
+
+			bool StartStr(const char *Key = NULL);
+			bool EndStr();
 
 			bool AppendNull(const char *Key = NULL);
 			bool AppendBool(const char *Key, const bool Val);

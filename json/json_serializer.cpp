@@ -86,6 +86,33 @@ namespace CubicleSoft
 			return true;
 		}
 
+		bool Serializer::StartStr(const char *Key)
+		{
+			if (MxModeDepth + 1 >= MxModes.GetSize() || !InternalAppendNextPrefix(Key, 1))  return false;
+
+			MxBuffer[MxBufferPos++] = '"';
+			MxBuffer[MxBufferPos] = '\0';
+
+			MxModeDepth++;
+			MxModes[MxModeDepth] = ModeStr;
+
+			return true;
+		}
+
+		bool Serializer::EndStr()
+		{
+			if (MxModes[MxModeDepth] != ModeStr)  return false;
+
+			if (MxBufferPos + 1 > MxBufferSize)  return false;
+
+			MxBuffer[MxBufferPos++] = '"';
+			MxBuffer[MxBufferPos] = '\0';
+
+			MxModeDepth--;
+
+			return true;
+		}
+
 		bool Serializer::AppendNull(const char *Key)
 		{
 			if (!InternalAppendNextPrefix(Key, 4))  return false;
@@ -166,7 +193,7 @@ namespace CubicleSoft
 			if (Val == NULL)  return false;
 
 			size_t x = CalculateStrSize(Val, false);
-			if (!InternalAppendNextPrefix(Key, x))  return false;
+			if ((MxModes[MxModeDepth] != ModeStr && !InternalAppendNextPrefix(Key, x)) || (MxModes[MxModeDepth] == ModeStr && MxBufferPos + x > MxBufferSize))  return false;
 
 			InternalAppendStr(Val);
 
@@ -178,7 +205,7 @@ namespace CubicleSoft
 			if (Val == NULL)  return false;
 
 			size_t x = CalculateStrSize(Val, Size, false);
-			if (!InternalAppendNextPrefix(Key, x))  return false;
+			if ((MxModes[MxModeDepth] != ModeStr && !InternalAppendNextPrefix(Key, x)) || (MxModes[MxModeDepth] == ModeStr && MxBufferPos + x > MxBufferSize))  return false;
 
 			InternalAppendStr(Val, Size);
 
@@ -208,7 +235,14 @@ namespace CubicleSoft
 				{
 					if (!EndObject())  return false;
 				}
-				else if (!EndArray())  return false;
+				if (MxModes[MxModeDepth] == ModeArrayFirst || MxModes[MxModeDepth] == ModeArrayNext)
+				{
+					if (!EndArray())  return false;
+				}
+				else if (MxModes[MxModeDepth] == ModeStr)
+				{
+					if (!EndStr())  return false;
+				}
 			}
 
 			return true;
@@ -216,7 +250,7 @@ namespace CubicleSoft
 
 		size_t Serializer::CalculateStrSize(const char *Val, bool AddKeySplitter)
 		{
-			size_t Result = 2;
+			size_t Result = (MxModes[MxModeDepth] != ModeStr ? 2 : 0);
 
 			for (; *Val; Val++)
 			{
@@ -253,7 +287,7 @@ namespace CubicleSoft
 
 		size_t Serializer::CalculateStrSize(const char *Val, size_t Size, bool AddKeySplitter)
 		{
-			size_t Result = 2;
+			size_t Result = (MxModes[MxModeDepth] != ModeStr ? 2 : 0);
 
 			while (Size)
 			{
@@ -291,7 +325,7 @@ namespace CubicleSoft
 
 		bool Serializer::InternalAppendNextPrefix(const char *Key, size_t ExtraSpace)
 		{
-			if (MxModes[MxModeDepth] == ModeRootNext || ((MxModes[MxModeDepth] == ModeObjectFirst || MxModes[MxModeDepth] == ModeObjectNext) && Key == NULL) || ((MxModes[MxModeDepth] == ModeRootFirst || MxModes[MxModeDepth] == ModeArrayFirst || MxModes[MxModeDepth] == ModeArrayNext) && Key != NULL))  return false;
+			if (MxModes[MxModeDepth] == ModeRootNext || MxModes[MxModeDepth] == ModeStr || ((MxModes[MxModeDepth] == ModeObjectFirst || MxModes[MxModeDepth] == ModeObjectNext) && Key == NULL) || ((MxModes[MxModeDepth] == ModeRootFirst || MxModes[MxModeDepth] == ModeArrayFirst || MxModes[MxModeDepth] == ModeArrayNext) && Key != NULL))  return false;
 
 			size_t x = (MxModes[MxModeDepth] == ModeObjectNext || MxModes[MxModeDepth] == ModeArrayNext ? MxValSplitterLen : 0);
 			if (Key != NULL)  x += CalculateStrSize(Key, true);
@@ -315,7 +349,7 @@ namespace CubicleSoft
 		// All calculations prior to calling these internal functions must be applied correctly to avoid an overflow.
 		void Serializer::InternalAppendStr(const char *Val)
 		{
-			MxBuffer[MxBufferPos++] = '"';
+			if (MxModes[MxModeDepth] != ModeStr)  MxBuffer[MxBufferPos++] = '"';
 
 			while (*Val)
 			{
@@ -333,13 +367,13 @@ namespace CubicleSoft
 				}
 			}
 
-			MxBuffer[MxBufferPos++] = '"';
+			if (MxModes[MxModeDepth] != ModeStr)  MxBuffer[MxBufferPos++] = '"';
 			MxBuffer[MxBufferPos] = '\0';
 		}
 
 		void Serializer::InternalAppendStr(const char *Val, size_t Size)
 		{
-			MxBuffer[MxBufferPos++] = '"';
+			if (MxModes[MxModeDepth] != ModeStr)  MxBuffer[MxBufferPos++] = '"';
 
 			while (Size)
 			{
@@ -359,7 +393,7 @@ namespace CubicleSoft
 				Size--;
 			}
 
-			MxBuffer[MxBufferPos++] = '"';
+			if (MxModes[MxModeDepth] != ModeStr)  MxBuffer[MxBufferPos++] = '"';
 			MxBuffer[MxBufferPos] = '\0';
 		}
 
